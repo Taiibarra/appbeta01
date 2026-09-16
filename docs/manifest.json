@@ -1,0 +1,35 @@
+{
+    "name": "Superación Personal",
+    "short_name": "Superación",
+    "start_url": ".",
+    "display": "standalone",
+    "background_color": "#0A0B0F",
+    "theme_color": "#0A0B0F",
+    "description": "Hábitos, diario, finanzas y metas con un asistente de recomendaciones.",
+    "orientation": "portrait-primary",
+    "prefer_related_applications": false,
+    "icons": [
+        {
+            "src": "icons/Icon-192.png",
+            "sizes": "192x192",
+            "type": "image/png"
+        },
+        {
+            "src": "icons/Icon-512.png",
+            "sizes": "512x512",
+            "type": "image/png"
+        },
+        {
+            "src": "icons/Icon-maskable-192.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "maskable"
+        },
+        {
+            "src": "icons/Icon-maskable-512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "maskable"
+        }
+    ]
+}

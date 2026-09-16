@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Diagnóstico</title>
+<style>
+  :root { color-scheme: dark; }
+  body {
+    background: #0A0B0F;
+    color: #F3F4F8;
+    font-family: -apple-system, system-ui, sans-serif;
+    padding: 24px;
+    line-height: 1.6;
+    margin: 0;
+  }
+  h1 { font-size: 20px; }
+  .row { margin: 16px 0; padding: 14px 16px; border-radius: 12px; border: 1px solid #272B36; }
+  .ok { color: #3DDC97; font-weight: 700; }
+  .fail { color: #FF6B6B; font-weight: 700; }
+  .label { color: #9BA1AC; font-size: 13px; }
+  code { color: #7C8CFF; word-break: break-all; }
+</style>
+</head>
+<body>
+  <h1>Diagnóstico del entorno</h1>
+
+  <div class="row">
+    <div class="label">WebAssembly</div>
+    <div id="wasm-result">probando…</div>
+  </div>
+
+  <div class="row">
+    <div class="label">Carga de script externo (gstatic.com)</div>
+    <div id="cdn-result">probando…</div>
+  </div>
+
+  <div class="row">
+    <div class="label">Trusted Types (política de seguridad que Flutter necesita)</div>
+    <div id="tt-result">probando…</div>
+  </div>
+
+  <div class="row">
+    <div class="label">document.baseURI (de dónde resolvería rutas relativas)</div>
+    <code id="base-uri"></code>
+  </div>
+
+  <div class="row">
+    <div class="label">Navegador</div>
+    <code id="ua"></code>
+  </div>
+
+  <script>
+    document.getElementById('ua').textContent = navigator.userAgent;
+    document.getElementById('base-uri').textContent = document.baseURI;
+
+    // Test 3: Flutter creates a named Trusted Types policy on boot. If the
+    // page's CSP restricts which policy names are allowed and "flutter-js"
+    // isn't one of them, this throws and silently aborts Flutter's entire
+    // bootstrap before anything ever paints.
+    (() => {
+      const el = document.getElementById('tt-result');
+      if (!window.trustedTypes) {
+        el.innerHTML = '<span class="ok">N/D</span> — este navegador no implementa Trusted Types (no puede ser la causa).';
+        return;
+      }
+      try {
+        window.trustedTypes.createPolicy('flutter-js', {
+          createScriptURL: (s) => s,
+        });
+        el.innerHTML = '<span class="ok">PERMITIDO</span> — se pudo crear la política "flutter-js".';
+      } catch (e) {
+        el.innerHTML = '<span class="fail">BLOQUEADO</span> — ' + (e && e.message ? e.message : e);
+      }
+    })();
+
+    // Test 1: can this environment run WebAssembly at all?
+    (async () => {
+      const el = document.getElementById('wasm-result');
+      try {
+        // Smallest valid WASM module (just headers, no code).
+        const bytes = new Uint8Array([0,97,115,109,1,0,0,0]);
+        const mod = await WebAssembly.instantiate(bytes);
+        el.innerHTML = '<span class="ok">FUNCIONA</span> — WebAssembly se puede ejecutar aquí.';
+      } catch (e) {
+        el.innerHTML = '<span class="fail">BLOQUEADO</span> — ' + (e && e.message ? e.message : e);
+      }
+    })();
+
+    // Test 2: can this environment load a script from an external CDN
+    // (gstatic.com), the thing that broke the Flutter app originally?
+    (() => {
+      const el = document.getElementById('cdn-result');
+      const timeout = setTimeout(() => {
+        el.innerHTML = '<span class="fail">BLOQUEADO</span> — se agotó el tiempo de espera (probablemente CSP).';
+      }, 4000);
+      const script = document.createElement('script');
+      script.src = 'https://www.gstatic.com/flutter-canvaskit/nonexistent-probe.js';
+      script.onerror = () => {
+        clearTimeout(timeout);
+        el.innerHTML = '<span class="ok">SE INTENTÓ CARGAR</span> — el navegador sí intentó pedir el archivo (falló por 404, no por bloqueo).';
+      };
+      script.onload = () => {
+        clearTimeout(timeout);
+        el.innerHTML = '<span class="ok">CARGÓ</span>';
+      };
+      document.head.appendChild(script);
+    })();
+  </script>
+</body>
+</html>
