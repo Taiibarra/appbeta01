@@ -8,7 +8,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-flutter build web --release
+flutter build web --release --pwa-strategy none
 python3 scripts/patch_canvaskit_url.py build/web/flutter_bootstrap.js
 
 echo ""
