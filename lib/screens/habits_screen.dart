@@ -3,6 +3,8 @@ import 'package:provider/provider.dart';
 
 import '../models/habit.dart';
 import '../services/app_state.dart';
+import '../theme.dart';
+import '../widgets/app_card.dart';
 
 const _emojiOptions = ['💪', '📚', '🧘', '💧', '🏃', '😴', '🥗', '✍️', '🎯', '🚭'];
 
@@ -24,7 +26,7 @@ class HabitsScreen extends StatelessWidget {
       body: habits.isEmpty
           ? _EmptyState(onAdd: () => _showAddHabitSheet(context))
           : ListView.separated(
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 100),
               itemCount: habits.length,
               separatorBuilder: (_, index) => const SizedBox(height: 12),
               itemBuilder: (context, i) => _HabitTile(habit: habits[i]),
@@ -39,9 +41,7 @@ class HabitsScreen extends StatelessWidget {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
+      backgroundColor: Colors.transparent,
       builder: (ctx) {
         return StatefulBuilder(
           builder: (ctx, setState) {
@@ -52,55 +52,62 @@ class HabitsScreen extends StatelessWidget {
                 top: 20,
                 bottom: MediaQuery.of(ctx).viewInsets.bottom + 20,
               ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Nuevo hábito',
-                      style: Theme.of(ctx)
-                          .textTheme
-                          .titleLarge
-                          ?.copyWith(fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 16),
-                  TextField(
-                    controller: controller,
-                    autofocus: true,
-                    decoration: const InputDecoration(hintText: 'Ej. Leer 20 minutos'),
-                  ),
-                  const SizedBox(height: 16),
-                  Wrap(
-                    spacing: 8,
-                    children: _emojiOptions.map((e) {
-                      final selected = e == selectedEmoji;
-                      return GestureDetector(
-                        onTap: () => setState(() => selectedEmoji = e),
-                        child: Container(
-                          padding: const EdgeInsets.all(10),
-                          decoration: BoxDecoration(
-                            color: selected
-                                ? const Color(0xFF5E60CE).withValues(alpha: 0.2)
-                                : const Color(0xFFF0EFFA),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Text(e, style: const TextStyle(fontSize: 20)),
-                        ),
-                      );
-                    }).toList(),
-                  ),
-                  const SizedBox(height: 20),
-                  SizedBox(
-                    width: double.infinity,
-                    child: FilledButton(
-                      onPressed: () {
-                        final name = controller.text.trim();
-                        if (name.isEmpty) return;
-                        context.read<AppState>().addHabit(name, selectedEmoji);
-                        Navigator.pop(ctx);
-                      },
-                      child: const Text('Agregar'),
+              child: Container(
+                padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
+                decoration: const BoxDecoration(
+                  color: AppColors.surfaceRaised,
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Nuevo hábito',
+                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: controller,
+                      autofocus: true,
+                      decoration: const InputDecoration(hintText: 'Ej. Leer 20 minutos'),
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 16),
+                    Wrap(
+                      spacing: 8,
+                      children: _emojiOptions.map((e) {
+                        final selected = e == selectedEmoji;
+                        return GestureDetector(
+                          onTap: () => setState(() => selectedEmoji = e),
+                          child: Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: selected
+                                  ? AppColors.indigo.withValues(alpha: 0.22)
+                                  : AppColors.surface,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: selected ? AppColors.indigo : AppColors.border,
+                              ),
+                            ),
+                            child: Text(e, style: const TextStyle(fontSize: 20)),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                    const SizedBox(height: 20),
+                    SizedBox(
+                      width: double.infinity,
+                      child: FilledButton(
+                        onPressed: () {
+                          final name = controller.text.trim();
+                          if (name.isEmpty) return;
+                          context.read<AppState>().addHabit(name, selectedEmoji);
+                          Navigator.pop(ctx);
+                        },
+                        child: const Text('Agregar'),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             );
           },
@@ -119,26 +126,43 @@ class _HabitTile extends StatelessWidget {
     final appState = context.read<AppState>();
     final doneToday = habit.isCompletedOn(dateKey(DateTime.now()));
 
-    return Card(
-      child: ListTile(
-        onTap: () => appState.toggleHabitToday(habit.id),
+    return AppCard(
+      padding: EdgeInsets.zero,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(20),
         onLongPress: () => _confirmDelete(context, habit),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        leading: CircleAvatar(
-          backgroundColor: const Color(0xFFF0EFFA),
-          child: Text(habit.emoji, style: const TextStyle(fontSize: 18)),
-        ),
-        title: Text(habit.name, style: const TextStyle(fontWeight: FontWeight.w600)),
-        subtitle: Text(
-          habit.currentStreak > 0
-              ? '🔥 Racha de ${habit.currentStreak} día${habit.currentStreak == 1 ? '' : 's'}'
-              : 'Sin racha activa',
-          style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
-        ),
-        trailing: Icon(
-          doneToday ? Icons.check_circle_rounded : Icons.circle_outlined,
-          color: doneToday ? const Color(0xFF4CAF93) : Colors.grey.shade400,
-          size: 28,
+        onTap: () => appState.toggleHabitToday(habit.id),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          child: Row(
+            children: [
+              CircleAvatar(
+                backgroundColor: AppColors.surfaceRaised,
+                child: Text(habit.emoji, style: const TextStyle(fontSize: 18)),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(habit.name, style: const TextStyle(fontWeight: FontWeight.w600)),
+                    const SizedBox(height: 2),
+                    Text(
+                      habit.currentStreak > 0
+                          ? '🔥 Racha de ${habit.currentStreak} día${habit.currentStreak == 1 ? '' : 's'}'
+                          : 'Sin racha activa',
+                      style: const TextStyle(color: AppColors.textMuted, fontSize: 12),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(
+                doneToday ? Icons.check_circle_rounded : Icons.circle_outlined,
+                color: doneToday ? AppColors.mint : AppColors.textMuted,
+                size: 26,
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -179,17 +203,17 @@ class _EmptyState extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             const Icon(Icons.check_circle_outline_rounded,
-                size: 56, color: Color(0xFF5E60CE)),
+                size: 56, color: AppColors.indigo),
             const SizedBox(height: 16),
             const Text(
               'Aún no tienes hábitos',
               style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
             ),
             const SizedBox(height: 8),
-            Text(
+            const Text(
               'Crea tu primer hábito y empieza a construir tu racha.',
               textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.grey.shade600),
+              style: TextStyle(color: AppColors.textMuted),
             ),
             const SizedBox(height: 20),
             FilledButton(onPressed: onAdd, child: const Text('Crear hábito')),

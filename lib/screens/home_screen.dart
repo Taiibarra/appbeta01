@@ -1,8 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../models/insight.dart';
 import '../services/app_state.dart';
+import '../services/insights_engine.dart';
+import '../services/money_format.dart';
 import '../services/quotes.dart';
+import '../theme.dart';
+import '../widgets/insight_card.dart';
+import '../widgets/section_header.dart';
+import '../widgets/stat_tile.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -10,6 +17,10 @@ class HomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final appState = context.watch<AppState>();
+    final insights = generateInsights(appState);
+    final topInsight = insights.isNotEmpty ? insights.first : allGoodInsight;
+    final restInsights = insights.length > 1 ? insights.sublist(1) : <Insight>[];
+
     final totalHabits = appState.habits.length;
     final doneToday = appState.todayCompletedCount;
     final longestStreak = appState.habits.isEmpty
@@ -19,75 +30,74 @@ class HomeScreen extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
       children: [
-        Text(
-          _greeting(),
-          style: Theme.of(context)
-              .textTheme
-              .headlineSmall
-              ?.copyWith(fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          'Sigamos construyendo la mejor versión de ti.',
-          style: TextStyle(color: Colors.grey.shade600),
-        ),
-        const SizedBox(height: 20),
-        _QuoteCard(quote: quoteOfTheDay()),
-        const SizedBox(height: 20),
         Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Expanded(
-              child: _StatCard(
-                icon: Icons.check_circle_rounded,
-                value: totalHabits == 0 ? '-' : '$doneToday/$totalHabits',
-                label: 'Hábitos hoy',
-                color: const Color(0xFF5E60CE),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _StatCard(
-                icon: Icons.local_fire_department_rounded,
-                value: '$longestStreak',
-                label: 'Mejor racha',
-                color: const Color(0xFFE0925B),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _StatCard(
-                icon: Icons.flag_rounded,
-                value: '${appState.activeGoalsCount}',
-                label: 'Metas activas',
-                color: const Color(0xFF4CAF93),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    _greeting(),
+                    style: const TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(quoteOfTheDay(),
+                      style: const TextStyle(color: AppColors.textMuted, fontSize: 13, height: 1.4)),
+                ],
               ),
             ),
           ],
         ),
-        const SizedBox(height: 24),
-        if (!appState.hasEntryToday) ...[
-          Text(
-            'Diario',
-            style: Theme.of(context)
-                .textTheme
-                .titleMedium
-                ?.copyWith(fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 12),
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Row(
-                children: [
-                  const Icon(Icons.edit_note_rounded, color: Color(0xFF5E60CE)),
-                  const SizedBox(width: 12),
-                  const Expanded(
-                    child: Text('Aún no has escrito en tu diario hoy.'),
-                  ),
-                ],
+        const SizedBox(height: 20),
+        const _SectionLabel('Tu asistente dice'),
+        const SizedBox(height: 10),
+        InsightBanner(insight: topInsight),
+        const SizedBox(height: 20),
+        Row(
+          children: [
+            Expanded(
+              child: StatTile(
+                icon: Icons.check_circle_rounded,
+                value: totalHabits == 0 ? '-' : '$doneToday/$totalHabits',
+                label: 'Hábitos hoy',
+                color: AppColors.indigo,
               ),
             ),
-          ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: StatTile(
+                icon: Icons.local_fire_department_rounded,
+                value: '$longestStreak',
+                label: 'Mejor racha',
+                color: AppColors.amber,
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: StatTile(
+                icon: Icons.account_balance_wallet_rounded,
+                value: formatMoney(appState.totalBalance),
+                label: 'Balance',
+                color: appState.totalBalance >= 0 ? AppColors.mint : AppColors.coral,
+              ),
+            ),
+          ],
+        ),
+        if (restInsights.isNotEmpty) ...[
+          const SizedBox(height: 24),
+          const SectionHeader(title: 'Más observaciones'),
+          const SizedBox(height: 12),
+          ...restInsights.take(4).map(
+                (i) => Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: InsightRow(insight: i),
+                ),
+              ),
         ],
       ],
     );
@@ -101,78 +111,30 @@ class HomeScreen extends StatelessWidget {
   }
 }
 
-class _QuoteCard extends StatelessWidget {
-  final String quote;
-  const _QuoteCard({required this.quote});
+class _SectionLabel extends StatelessWidget {
+  final String text;
+  const _SectionLabel(this.text);
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF5E60CE), Color(0xFF6930C3)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
+    return Row(
+      children: [
+        Container(
+          width: 6,
+          height: 6,
+          decoration: const BoxDecoration(color: AppColors.mint, shape: BoxShape.circle),
         ),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Icon(Icons.format_quote_rounded, color: Colors.white70, size: 28),
-          const SizedBox(height: 8),
-          Text(
-            quote,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              height: 1.4,
-            ),
+        const SizedBox(width: 8),
+        Text(
+          text.toUpperCase(),
+          style: const TextStyle(
+            fontSize: 11.5,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 0.8,
+            color: AppColors.textMuted,
           ),
-        ],
-      ),
-    );
-  }
-}
-
-class _StatCard extends StatelessWidget {
-  final IconData icon;
-  final String value;
-  final String label;
-  final Color color;
-
-  const _StatCard({
-    required this.icon,
-    required this.value,
-    required this.label,
-    required this.color,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
-        child: Column(
-          children: [
-            Icon(icon, color: color, size: 22),
-            const SizedBox(height: 8),
-            Text(
-              value,
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              label,
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
-            ),
-          ],
         ),
-      ),
+      ],
     );
   }
 }

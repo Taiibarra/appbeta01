@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import 'screens/finance_screen.dart';
 import 'screens/goals_screen.dart';
 import 'screens/habits_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/journal_screen.dart';
 import 'services/app_state.dart';
 import 'theme.dart';
+import 'widgets/custom_nav_bar.dart';
 
 void main() {
   runApp(
@@ -45,7 +47,22 @@ class _RootScreenState extends State<RootScreen> {
     HomeScreen(),
     HabitsScreen(),
     JournalScreen(),
+    FinanceScreen(),
     GoalsScreen(),
+  ];
+
+  static const _navItems = [
+    NavItem(icon: Icons.home_outlined, activeIcon: Icons.home_rounded, label: 'Inicio'),
+    NavItem(
+        icon: Icons.check_circle_outline_rounded,
+        activeIcon: Icons.check_circle_rounded,
+        label: 'Hábitos'),
+    NavItem(icon: Icons.book_outlined, activeIcon: Icons.book_rounded, label: 'Diario'),
+    NavItem(
+        icon: Icons.account_balance_wallet_outlined,
+        activeIcon: Icons.account_balance_wallet_rounded,
+        label: 'Finanzas'),
+    NavItem(icon: Icons.flag_outlined, activeIcon: Icons.flag_rounded, label: 'Metas'),
   ];
 
   @override
@@ -59,17 +76,11 @@ class _RootScreenState extends State<RootScreen> {
     }
 
     return Scaffold(
-      body: SafeArea(child: _screens[_index]),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _index,
-        onDestinationSelected: (i) => setState(() => _index = i),
-        destinations: const [
-          NavigationDestination(icon: Icon(Icons.home_rounded), label: 'Inicio'),
-          NavigationDestination(
-              icon: Icon(Icons.check_circle_outline_rounded), label: 'Hábitos'),
-          NavigationDestination(icon: Icon(Icons.book_outlined), label: 'Diario'),
-          NavigationDestination(icon: Icon(Icons.flag_outlined), label: 'Metas'),
-        ],
+      body: SafeArea(bottom: false, child: _screens[_index]),
+      bottomNavigationBar: CustomNavBar(
+        items: _navItems,
+        currentIndex: _index,
+        onTap: (i) => setState(() => _index = i),
       ),
     );
   }
