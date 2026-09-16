@@ -9,6 +9,7 @@ import '../services/date_format_es.dart';
 import '../services/money_format.dart';
 import '../theme.dart';
 import '../widgets/app_card.dart';
+import '../widgets/balance_chart.dart';
 import '../widgets/section_header.dart';
 import 'fixed_budget_screen.dart';
 
@@ -48,6 +49,10 @@ class FinanceScreen extends StatelessWidget {
         children: [
           _BalanceHeader(appState: appState),
           const SizedBox(height: 20),
+          if (appState.transactions.isNotEmpty) ...[
+            BalanceChart(transactions: appState.transactions),
+            const SizedBox(height: 20),
+          ],
           if (appState.monthSpendByCategory.isNotEmpty) ...[
             const SectionHeader(title: 'Gastos por categoría'),
             const SizedBox(height: 12),

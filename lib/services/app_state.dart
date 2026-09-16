@@ -29,6 +29,11 @@ class AppState extends ChangeNotifier {
   String? userName;
   bool loaded = false;
 
+  bool reminderEnabled = false;
+  int reminderHour = 20;
+  int reminderMinute = 0;
+  String? lastReminderShownOn;
+
   Future<void> load() async {
     habits = await _storage.loadHabits();
     journalEntries = await _storage.loadJournalEntries();
@@ -38,8 +43,36 @@ class AppState extends ChangeNotifier {
     fixedIncomes = await _storage.loadFixedIncomes();
     fixedExpenses = await _storage.loadFixedExpenses();
     userName = await _storage.loadUserName();
+    final reminder = await _storage.loadReminderSettings();
+    reminderEnabled = reminder.enabled;
+    reminderHour = reminder.hour;
+    reminderMinute = reminder.minute;
+    lastReminderShownOn = await _storage.loadLastReminderShownOn();
     loaded = true;
     notifyListeners();
+  }
+
+  Future<void> setReminder({required bool enabled, required int hour, required int minute}) async {
+    reminderEnabled = enabled;
+    reminderHour = hour;
+    reminderMinute = minute;
+    await _storage.saveReminderSettings(enabled: enabled, hour: hour, minute: minute);
+    notifyListeners();
+  }
+
+  Future<void> markReminderShownToday() async {
+    lastReminderShownOn = dateKey(DateTime.now());
+    await _storage.saveLastReminderShownOn(lastReminderShownOn!);
+  }
+
+  /// Whether it's time to nudge the user today: reminders are on, the
+  /// clock has passed the chosen time, and it hasn't already fired today.
+  bool get shouldShowReminderNow {
+    if (!reminderEnabled) return false;
+    if (lastReminderShownOn == dateKey(DateTime.now())) return false;
+    final now = DateTime.now();
+    final target = DateTime(now.year, now.month, now.day, reminderHour, reminderMinute);
+    return now.isAfter(target);
   }
 
   Future<void> setUserName(String name) async {
@@ -103,12 +136,18 @@ class AppState extends ChangeNotifier {
       );
 
   // Goals
-  Future<void> addGoal(String title, String description, DateTime? targetDate) async {
+  Future<void> addGoal(
+    String title,
+    String description,
+    DateTime? targetDate, {
+    double? targetAmount,
+  }) async {
     goals.add(Goal(
       id: _uuid.v4(),
       title: title,
       description: description,
       targetDate: targetDate,
+      targetAmount: targetAmount,
       createdAt: DateTime.now(),
     ));
     await _storage.saveGoals(goals);
@@ -129,7 +168,22 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  int get activeGoalsCount => goals.where((g) => !g.done).length;
+  int get activeGoalsCount => goals.where((g) => !effectiveDone(g)).length;
+
+  /// Total ever logged under the "Ahorro" category — the pool every
+  /// financial goal's progress is measured against.
+  double get totalSavedAllTime => transactions
+      .where((t) => t.category == FinanceCategory.ahorro)
+      .fold(0.0, (sum, t) => sum + t.amount);
+
+  double effectiveProgress(Goal goal) {
+    if (!goal.isFinancial) return goal.progress;
+    if (goal.targetAmount == null || goal.targetAmount == 0) return 0;
+    return (totalSavedAllTime / goal.targetAmount!).clamp(0.0, 1.0);
+  }
+
+  bool effectiveDone(Goal goal) =>
+      goal.isFinancial ? effectiveProgress(goal) >= 1.0 : goal.done;
 
   // Finance
   Future<void> addTransaction(

@@ -5,6 +5,7 @@ import '../models/habit.dart';
 import '../services/app_state.dart';
 import '../theme.dart';
 import '../widgets/app_card.dart';
+import 'habit_calendar_screen.dart';
 
 const _emojiOptions = ['💪', '📚', '🧘', '💧', '🏃', '😴', '🥗', '✍️', '🎯', '🚭'];
 
@@ -156,6 +157,18 @@ class _HabitTile extends StatelessWidget {
                   ],
                 ),
               ),
+              GestureDetector(
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => HabitCalendarScreen(habit: habit)),
+                ),
+                child: const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 6),
+                  child: Icon(Icons.calendar_month_outlined,
+                      color: AppColors.textMuted, size: 20),
+                ),
+              ),
+              const SizedBox(width: 4),
               Icon(
                 doneToday ? Icons.check_circle_rounded : Icons.circle_outlined,
                 color: doneToday ? AppColors.mint : AppColors.textMuted,

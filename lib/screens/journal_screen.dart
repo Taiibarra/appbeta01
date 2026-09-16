@@ -7,6 +7,7 @@ import '../services/app_state.dart';
 import '../services/date_format_es.dart';
 import '../theme.dart';
 import '../widgets/app_card.dart';
+import '../widgets/mood_chart.dart';
 
 class JournalScreen extends StatelessWidget {
   const JournalScreen({super.key});
@@ -25,11 +26,18 @@ class JournalScreen extends StatelessWidget {
       ),
       body: entries.isEmpty
           ? const _EmptyState()
-          : ListView.separated(
+          : ListView(
               padding: const EdgeInsets.fromLTRB(20, 0, 20, 100),
-              itemCount: entries.length,
-              separatorBuilder: (_, index) => const SizedBox(height: 12),
-              itemBuilder: (context, i) => _EntryCard(entry: entries[i]),
+              children: [
+                if (entries.length >= 2) ...[
+                  MoodChart(entries: entries),
+                  const SizedBox(height: 20),
+                ],
+                ...entries.map((e) => Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: _EntryCard(entry: e),
+                    )),
+              ],
             ),
     );
   }

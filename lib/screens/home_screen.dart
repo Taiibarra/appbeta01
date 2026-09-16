@@ -6,6 +6,7 @@ import '../models/insight.dart';
 import '../services/app_state.dart';
 import '../services/insights_engine.dart';
 import '../services/money_format.dart';
+import '../services/notification_service.dart';
 import '../services/quotes.dart';
 import '../theme.dart';
 import '../widgets/insight_card.dart';
@@ -51,6 +52,20 @@ class HomeScreen extends StatelessWidget {
                   Text(quoteOfTheDay(),
                       style: const TextStyle(color: AppColors.textMuted, fontSize: 13, height: 1.4)),
                 ],
+              ),
+            ),
+            GestureDetector(
+              onTap: () => _showReminderSheet(context),
+              child: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(border: Border.all(color: AppColors.border)),
+                child: Icon(
+                  appState.reminderEnabled
+                      ? Icons.notifications_active_rounded
+                      : Icons.notifications_outlined,
+                  size: 18,
+                  color: appState.reminderEnabled ? AppColors.rust : AppColors.textMuted,
+                ),
               ),
             ),
           ],
@@ -103,6 +118,103 @@ class HomeScreen extends StatelessWidget {
               ),
         ],
       ],
+    );
+  }
+
+  void _showReminderSheet(BuildContext context) {
+    final appState = context.read<AppState>();
+    bool enabled = appState.reminderEnabled;
+    TimeOfDay time = TimeOfDay(hour: appState.reminderHour, minute: appState.reminderMinute);
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (ctx, setState) {
+            return Padding(
+              padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
+              child: Container(
+                padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
+                decoration: const BoxDecoration(
+                  color: AppColors.surfaceRaised,
+                  border: Border(top: BorderSide(color: AppColors.border)),
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'RECORDATORIO DIARIO',
+                      style: GoogleFonts.barlowCondensed(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 0.4,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    const Text(
+                      'Te avisamos mientras la app esté abierta o en segundo plano '
+                      'en tu navegador — no es una notificación garantizada con la '
+                      'app cerrada del todo.',
+                      style: TextStyle(fontSize: 12.5, color: AppColors.textMuted, height: 1.5),
+                    ),
+                    const SizedBox(height: 20),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text('Activar recordatorio', style: TextStyle(fontSize: 14)),
+                        Switch(
+                          value: enabled,
+                          activeThumbColor: AppColors.rust,
+                          onChanged: (v) async {
+                            if (v && NotificationService.permission != 'granted') {
+                              final result = await NotificationService.requestPermission();
+                              if (result != 'granted') return;
+                            }
+                            setState(() => enabled = v);
+                          },
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text('Hora', style: TextStyle(fontSize: 14)),
+                        OutlinedButton(
+                          onPressed: () async {
+                            final picked = await showTimePicker(context: ctx, initialTime: time);
+                            if (picked != null) setState(() => time = picked);
+                          },
+                          child: Text(time.format(ctx)),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+                    SizedBox(
+                      width: double.infinity,
+                      child: FilledButton(
+                        onPressed: () {
+                          appState.setReminder(
+                            enabled: enabled,
+                            hour: time.hour,
+                            minute: time.minute,
+                          );
+                          Navigator.pop(ctx);
+                        },
+                        child: const Text('GUARDAR'),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
     );
   }
 

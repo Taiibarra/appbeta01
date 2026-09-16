@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../models/goal.dart';
 import '../services/app_state.dart';
 import '../services/date_format_es.dart';
+import '../services/money_format.dart';
 import '../theme.dart';
 import '../widgets/app_card.dart';
 
@@ -36,7 +37,9 @@ class GoalsScreen extends StatelessWidget {
   void _showAddGoalSheet(BuildContext context) {
     final titleController = TextEditingController();
     final descController = TextEditingController();
+    final amountController = TextEditingController();
     DateTime? targetDate;
+    bool isFinancial = false;
 
     showModalBottomSheet(
       context: context,
@@ -92,6 +95,39 @@ class GoalsScreen extends StatelessWidget {
                           ? 'Fecha objetivo (opcional)'
                           : formatDateShortEs(targetDate!)),
                     ),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text('Meta de ahorro',
+                                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+                              const SizedBox(height: 2),
+                              const Text(
+                                'El progreso se calcula solo desde tus transacciones de Ahorro.',
+                                style: TextStyle(fontSize: 11.5, color: AppColors.textMuted),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Switch(
+                          value: isFinancial,
+                          activeThumbColor: AppColors.rust,
+                          onChanged: (v) => setState(() => isFinancial = v),
+                        ),
+                      ],
+                    ),
+                    if (isFinancial) ...[
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: amountController,
+                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                        decoration:
+                            const InputDecoration(prefixText: '\$ ', hintText: 'Monto objetivo'),
+                      ),
+                    ],
                     const SizedBox(height: 20),
                     SizedBox(
                       width: double.infinity,
@@ -99,9 +135,18 @@ class GoalsScreen extends StatelessWidget {
                         onPressed: () {
                           final title = titleController.text.trim();
                           if (title.isEmpty) return;
-                          context
-                              .read<AppState>()
-                              .addGoal(title, descController.text.trim(), targetDate);
+                          double? targetAmount;
+                          if (isFinancial) {
+                            targetAmount = double.tryParse(
+                                amountController.text.replaceAll(',', '.'));
+                            if (targetAmount == null || targetAmount <= 0) return;
+                          }
+                          context.read<AppState>().addGoal(
+                                title,
+                                descController.text.trim(),
+                                targetDate,
+                                targetAmount: targetAmount,
+                              );
                           Navigator.pop(ctx);
                         },
                         child: const Text('AGREGAR'),
@@ -124,19 +169,27 @@ class _GoalCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final appState = context.watch<AppState>();
+    final progress = appState.effectiveProgress(goal);
+    final done = appState.effectiveDone(goal);
+
     return AppCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
+              if (goal.isFinancial) ...[
+                const Icon(Icons.savings_outlined, size: 16, color: AppColors.olive),
+                const SizedBox(width: 6),
+              ],
               Expanded(
                 child: Text(
                   goal.title,
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
-                    decoration: goal.done ? TextDecoration.lineThrough : null,
-                    color: goal.done ? AppColors.textMuted : AppColors.textPrimary,
+                    decoration: done ? TextDecoration.lineThrough : null,
+                    color: done ? AppColors.textMuted : AppColors.textPrimary,
                   ),
                 ),
               ),
@@ -160,29 +213,38 @@ class _GoalCard extends StatelessWidget {
                 style: const TextStyle(color: AppColors.textMuted, fontSize: 12),
               ),
             ),
+          if (goal.isFinancial)
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Text(
+                '${formatMoney(appState.totalSavedAllTime)} de ${formatMoney(goal.targetAmount!)} ahorrados',
+                style: const TextStyle(color: AppColors.olive, fontSize: 12, fontWeight: FontWeight.w600),
+              ),
+            ),
           const SizedBox(height: 12),
           ClipRRect(
             borderRadius: BorderRadius.circular(8),
             child: LinearProgressIndicator(
-              value: goal.progress,
+              value: progress,
               minHeight: 8,
               backgroundColor: AppColors.surfaceRaised,
-              color: goal.done ? AppColors.mint : AppColors.indigo,
+              color: done ? AppColors.olive : AppColors.rustLight,
             ),
           ),
           const SizedBox(height: 8),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('${(goal.progress * 100).round()}%',
+              Text('${(progress * 100).round()}%',
                   style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
-              Expanded(
-                child: Slider(
-                  value: goal.progress,
-                  onChanged: (v) =>
-                      context.read<AppState>().updateGoalProgress(goal.id, v),
+              if (!goal.isFinancial)
+                Expanded(
+                  child: Slider(
+                    value: progress,
+                    onChanged: (v) =>
+                        context.read<AppState>().updateGoalProgress(goal.id, v),
+                  ),
                 ),
-              ),
             ],
           ),
         ],

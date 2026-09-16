@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -8,6 +10,7 @@ import 'screens/home_screen.dart';
 import 'screens/journal_screen.dart';
 import 'screens/onboarding_screen.dart';
 import 'services/app_state.dart';
+import 'services/notification_service.dart';
 import 'theme.dart';
 import 'widgets/custom_nav_bar.dart';
 
@@ -43,6 +46,33 @@ class RootScreen extends StatefulWidget {
 
 class _RootScreenState extends State<RootScreen> {
   int _index = 0;
+  Timer? _reminderTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _reminderTimer = Timer.periodic(const Duration(seconds: 60), (_) => _checkReminder());
+    WidgetsBinding.instance.addPostFrameCallback((_) => _checkReminder());
+  }
+
+  @override
+  void dispose() {
+    _reminderTimer?.cancel();
+    super.dispose();
+  }
+
+  void _checkReminder() {
+    final appState = context.read<AppState>();
+    if (!appState.loaded || !appState.shouldShowReminderNow) return;
+    appState.markReminderShownToday();
+    final pending = appState.habits.length - appState.todayCompletedCount;
+    final body = appState.habits.isEmpty
+        ? 'Abre la app y registra cómo va tu día.'
+        : pending > 0
+            ? 'Te faltan $pending hábito${pending == 1 ? '' : 's'} por marcar hoy.'
+            : '¡Ya completaste tus hábitos de hoy! Sigue así.';
+    NotificationService.show('OrgApp', body);
+  }
 
   final _screens = const [
     HomeScreen(),
