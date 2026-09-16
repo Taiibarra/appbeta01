@@ -34,9 +34,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               Container(width: 28, height: 2, color: AppColors.rust),
               const SizedBox(height: 18),
               Text(
-                'SUPERACIÓN\nPERSONAL',
+                'ORGAPP',
                 style: GoogleFonts.barlowCondensed(
-                  fontSize: 40,
+                  fontSize: 48,
                   height: 1.05,
                   fontWeight: FontWeight.w700,
                   letterSpacing: 0.5,

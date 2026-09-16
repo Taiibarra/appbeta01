@@ -86378,7 +86378,7 @@ r=A.azI(B.bm,e,0,e,e,e,e,e,e,e,B.U,e,e,e,e,e,e,new A.cy(A.dx(3),B.q),e,e,e)
 q=A.aKd(B.bm,B.U,B.Ge,new A.cy(A.dx(3),B.q),e,B.S7)
 p=A.aLJ(e,e,e,e,e,e,e,e,e,B.U,e,e,B.G9,e,new A.cy(A.dx(3),B.q),B.BQ,e,e,e,e)
 n=A.Ot(e,e,e,e,e,e,e,e,e,B.cz,e,e,e,e,e,e,e,e,e,e)
-return new A.zE(B.OT,"Superaci\xf3n Personal",A.qu(s,B.BW,B.ac,new A.ry(e,B.cV,e,e,0,B.aO,B.lr),B.DC,B.Fj,B.Fs,new A.t7(q),r,d,B.Hx,A.aA4(new A.fv(4,A.dx(3),B.h4),e,B.k8,e,new A.fv(4,A.dx(3),B.h4),B.cy,!0,new A.fv(4,A.dx(3),B.BR),B.iR),new A.tQ(p),B.Og,B.nz,A.awp(e,B.bm,e,e,e,e,e,e,e,e,B.bR,e,e,e,B.bm.jz(0.15),e,e,e,e,e,e,e,e,B.bm,e,e,e,e,e,e,e,e,e,e,e,e),B.nc,new A.uH(n),f,!0),!1,e)}}
+return new A.zE(B.OT,"OrgApp",A.qu(s,B.BW,B.ac,new A.ry(e,B.cV,e,e,0,B.aO,B.lr),B.DC,B.Fj,B.Fs,new A.t7(q),r,d,B.Hx,A.aA4(new A.fv(4,A.dx(3),B.h4),e,B.k8,e,new A.fv(4,A.dx(3),B.h4),B.cy,!0,new A.fv(4,A.dx(3),B.BR),B.iR),new A.tQ(p),B.Og,B.nz,A.awp(e,B.bm,e,e,e,e,e,e,e,e,B.bR,e,e,e,B.bm.jz(0.15),e,e,e,e,e,e,e,e,B.bm,e,e,e,e,e,e,e,e,e,e,e,e),B.nc,new A.uH(n),f,!0),!1,e)}}
 A.B3.prototype={
 af(){return new A.Ve()}}
 A.Ve.prototype={
@@ -86935,7 +86935,7 @@ s=this.c
 s.toString
 A.dC(s,!1,t.V).wk(r)},
 G(a){var s=null
-return A.ug(s,s,A.adM(!0,new A.aE(B.Gi,A.ca(A.b([A.cO(s,s,B.t,B.bm,s,s,s,2,s,s,s,s,28),B.Af,A.aY("SUPERACI\xd3N\nPERSONAL",s,s,s,A.iv().$5$color$fontSize$fontWeight$height$letterSpacing(B.U,40,B.T,1.05,0.5),s,s,s),B.lW,B.WM,B.R3,A.k0(s,B.be,!0,s,!0,B.I,s,A.m8(),this.d,s,s,s,s,s,2,B.HR,B.O,!0,s,!0,s,!1,s,B.b6,s,s,s,s,s,s,s,s,1,s,s,!1,"\u2022",s,s,s,new A.aou(this),s,!1,s,s,!1,s,!0,s,B.bx,s,s,s,s,s,s,s,s,s,s,s,B.UF,!0,B.ad,s,B.RC,s,s,s,s),B.bM,A.cC(A.mp(B.WG,this.gagP()),s,1/0)],t.p),B.a2,B.i7,B.A),s),!0),s,s)}}
+return A.ug(s,s,A.adM(!0,new A.aE(B.Gi,A.ca(A.b([A.cO(s,s,B.t,B.bm,s,s,s,2,s,s,s,s,28),B.Af,A.aY("ORGAPP",s,s,s,A.iv().$5$color$fontSize$fontWeight$height$letterSpacing(B.U,48,B.T,1.05,0.5),s,s,s),B.lW,B.WM,B.R3,A.k0(s,B.be,!0,s,!0,B.I,s,A.m8(),this.d,s,s,s,s,s,2,B.HR,B.O,!0,s,!0,s,!1,s,B.b6,s,s,s,s,s,s,s,s,1,s,s,!1,"\u2022",s,s,s,new A.aou(this),s,!1,s,s,!1,s,!0,s,B.bx,s,s,s,s,s,s,s,s,s,s,s,B.UF,!0,B.ad,s,B.RC,s,s,s,s),B.bM,A.cC(A.mp(B.WG,this.gagP()),s,1/0)],t.p),B.a2,B.i7,B.A),s),!0),s,s)}}
 A.aou.prototype={
 $1(a){return this.a.Rq()},
 $S:52}

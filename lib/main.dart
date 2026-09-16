@@ -26,7 +26,7 @@ class SuperacionApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Superación Personal',
+      title: 'OrgApp',
       debugShowCheckedModeBanner: false,
       theme: buildAppTheme(),
       home: const RootScreen(),
