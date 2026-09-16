@@ -14,22 +14,25 @@
     This is a placeholder for base href that will be replaced by the value of
     the `--base-href` argument provided to `flutter build`.
   -->
-  <base href="$FLUTTER_BASE_HREF">
+  <!-- Intentionally no <base> tag: without one, the browser resolves
+       every relative asset path against the page's own URL, which is
+       what we need when hosting at an unknown sub-path (e.g. a
+       published Artifact folder) instead of a fixed site root. -->
 
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
-  <meta name="description" content="A new Flutter project.">
+  <meta name="description" content="Hábitos, diario, finanzas y metas con un asistente de recomendaciones.">
 
   <!-- iOS meta tags & icons -->
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
-  <meta name="apple-mobile-web-app-title" content="superacion_personal">
+  <meta name="apple-mobile-web-app-title" content="Superación">
   <link rel="apple-touch-icon" href="icons/Icon-192.png">
 
   <!-- Favicon -->
   <link rel="icon" type="image/png" href="favicon.png"/>
 
-  <title>superacion_personal</title>
+  <title>Superación Personal</title>
   <link rel="manifest" href="manifest.json">
 </head>
 <body>
