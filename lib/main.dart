@@ -6,6 +6,7 @@ import 'screens/goals_screen.dart';
 import 'screens/habits_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/journal_screen.dart';
+import 'screens/onboarding_screen.dart';
 import 'services/app_state.dart';
 import 'theme.dart';
 import 'widgets/custom_nav_bar.dart';
@@ -73,6 +74,10 @@ class _RootScreenState extends State<RootScreen> {
       return const Scaffold(
         body: Center(child: CircularProgressIndicator()),
       );
+    }
+
+    if (appState.userName == null || appState.userName!.isEmpty) {
+      return const OnboardingScreen();
     }
 
     return Scaffold(

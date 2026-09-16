@@ -3,6 +3,7 @@ import 'package:uuid/uuid.dart';
 
 import '../models/budget.dart';
 import '../models/finance_category.dart';
+import '../models/fixed_money_item.dart';
 import '../models/goal.dart';
 import '../models/habit.dart';
 import '../models/journal_entry.dart';
@@ -23,6 +24,9 @@ class AppState extends ChangeNotifier {
   List<Goal> goals = [];
   List<Transaction> transactions = [];
   List<Budget> budgets = [];
+  List<FixedMoneyItem> fixedIncomes = [];
+  List<FixedMoneyItem> fixedExpenses = [];
+  String? userName;
   bool loaded = false;
 
   Future<void> load() async {
@@ -31,7 +35,16 @@ class AppState extends ChangeNotifier {
     goals = await _storage.loadGoals();
     transactions = await _storage.loadTransactions();
     budgets = await _storage.loadBudgets();
+    fixedIncomes = await _storage.loadFixedIncomes();
+    fixedExpenses = await _storage.loadFixedExpenses();
+    userName = await _storage.loadUserName();
     loaded = true;
+    notifyListeners();
+  }
+
+  Future<void> setUserName(String name) async {
+    userName = name.trim();
+    await _storage.saveUserName(userName!);
     notifyListeners();
   }
 
@@ -198,4 +211,37 @@ class AppState extends ChangeNotifier {
   DateTime? get lastTransactionDate => transactions.isEmpty
       ? null
       : transactions.map((t) => t.date).reduce((a, b) => a.isAfter(b) ? a : b);
+
+  // Fixed monthly budget (income vs. fixed expenses worksheet)
+  Future<void> addFixedIncome(String label, double amount) async {
+    fixedIncomes.add(FixedMoneyItem(id: _uuid.v4(), label: label, amount: amount));
+    await _storage.saveFixedIncomes(fixedIncomes);
+    notifyListeners();
+  }
+
+  Future<void> deleteFixedIncome(String id) async {
+    fixedIncomes.removeWhere((i) => i.id == id);
+    await _storage.saveFixedIncomes(fixedIncomes);
+    notifyListeners();
+  }
+
+  Future<void> addFixedExpense(String label, double amount) async {
+    fixedExpenses.add(FixedMoneyItem(id: _uuid.v4(), label: label, amount: amount));
+    await _storage.saveFixedExpenses(fixedExpenses);
+    notifyListeners();
+  }
+
+  Future<void> deleteFixedExpense(String id) async {
+    fixedExpenses.removeWhere((i) => i.id == id);
+    await _storage.saveFixedExpenses(fixedExpenses);
+    notifyListeners();
+  }
+
+  double get totalFixedIncome =>
+      fixedIncomes.fold(0.0, (sum, i) => sum + i.amount);
+
+  double get totalFixedExpenses =>
+      fixedExpenses.fold(0.0, (sum, i) => sum + i.amount);
+
+  double get fixedNet => totalFixedIncome - totalFixedExpenses;
 }

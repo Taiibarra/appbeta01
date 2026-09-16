@@ -56,7 +56,7 @@ class HabitsScreen extends StatelessWidget {
                 padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
                 decoration: const BoxDecoration(
                   color: AppColors.surfaceRaised,
-                  borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+                  border: Border(top: BorderSide(color: AppColors.border)),
                 ),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -83,7 +83,7 @@ class HabitsScreen extends StatelessWidget {
                               color: selected
                                   ? AppColors.indigo.withValues(alpha: 0.22)
                                   : AppColors.surface,
-                              borderRadius: BorderRadius.circular(12),
+                              borderRadius: BorderRadius.circular(3),
                               border: Border.all(
                                 color: selected ? AppColors.indigo : AppColors.border,
                               ),
@@ -103,7 +103,7 @@ class HabitsScreen extends StatelessWidget {
                           context.read<AppState>().addHabit(name, selectedEmoji);
                           Navigator.pop(ctx);
                         },
-                        child: const Text('Agregar'),
+                        child: const Text('AGREGAR'),
                       ),
                     ),
                   ],
@@ -129,7 +129,7 @@ class _HabitTile extends StatelessWidget {
     return AppCard(
       padding: EdgeInsets.zero,
       child: InkWell(
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(3),
         onLongPress: () => _confirmDelete(context, habit),
         onTap: () => appState.toggleHabitToday(habit.id),
         child: Padding(
@@ -176,13 +176,13 @@ class _HabitTile extends StatelessWidget {
         content: Text('¿Eliminar "${habit.name}"? Se perderá su historial.'),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(ctx), child: const Text('Cancelar')),
+              onPressed: () => Navigator.pop(ctx), child: const Text('CANCELAR')),
           TextButton(
             onPressed: () {
               context.read<AppState>().deleteHabit(habit.id);
               Navigator.pop(ctx);
             },
-            child: const Text('Eliminar'),
+            child: const Text('ELIMINAR'),
           ),
         ],
       ),
@@ -216,7 +216,7 @@ class _EmptyState extends StatelessWidget {
               style: TextStyle(color: AppColors.textMuted),
             ),
             const SizedBox(height: 20),
-            FilledButton(onPressed: onAdd, child: const Text('Crear hábito')),
+            FilledButton(onPressed: onAdd, child: const Text('CREAR HÁBITO')),
           ],
         ),
       ),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import '../theme.dart';
 
@@ -15,10 +16,11 @@ class SectionHeader extends StatelessWidget {
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(
-          title,
-          style: const TextStyle(
+          title.toUpperCase(),
+          style: GoogleFonts.barlowCondensed(
             fontSize: 16,
             fontWeight: FontWeight.w700,
+            letterSpacing: 0.4,
             color: AppColors.textPrimary,
           ),
         ),
@@ -26,11 +28,12 @@ class SectionHeader extends StatelessWidget {
           GestureDetector(
             onTap: onAction,
             child: Text(
-              action!,
-              style: const TextStyle(
-                fontSize: 13,
+              action!.toUpperCase(),
+              style: GoogleFonts.barlowCondensed(
+                fontSize: 12.5,
                 fontWeight: FontWeight.w600,
-                color: AppColors.mint,
+                letterSpacing: 0.3,
+                color: AppColors.rust,
               ),
             ),
           ),

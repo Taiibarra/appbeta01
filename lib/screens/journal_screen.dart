@@ -56,7 +56,7 @@ class JournalScreen extends StatelessWidget {
                 padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
                 decoration: const BoxDecoration(
                   color: AppColors.surfaceRaised,
-                  borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+                  border: Border(top: BorderSide(color: AppColors.border)),
                 ),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -77,7 +77,7 @@ class JournalScreen extends StatelessWidget {
                               color: selected
                                   ? mood.color.withValues(alpha: 0.2)
                                   : AppColors.surface,
-                              borderRadius: BorderRadius.circular(14),
+                              borderRadius: BorderRadius.circular(3),
                               border: Border.all(
                                 color: selected ? mood.color : AppColors.border,
                                 width: selected ? 2 : 1,
@@ -106,7 +106,7 @@ class JournalScreen extends StatelessWidget {
                               .addJournalEntry(selectedMood, controller.text.trim());
                           Navigator.pop(ctx);
                         },
-                        child: const Text('Guardar'),
+                        child: const Text('GUARDAR'),
                       ),
                     ),
                   ],

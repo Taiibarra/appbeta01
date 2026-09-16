@@ -10,6 +10,7 @@ import '../services/money_format.dart';
 import '../theme.dart';
 import '../widgets/app_card.dart';
 import '../widgets/section_header.dart';
+import 'fixed_budget_screen.dart';
 
 class FinanceScreen extends StatelessWidget {
   const FinanceScreen({super.key});
@@ -24,8 +25,16 @@ class FinanceScreen extends StatelessWidget {
         title: const Text('Finanzas'),
         actions: [
           IconButton(
+            icon: const Icon(Icons.table_rows_rounded),
+            tooltip: 'Presupuesto fijo',
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const FixedBudgetScreen()),
+            ),
+          ),
+          IconButton(
             icon: const Icon(Icons.tune_rounded),
-            tooltip: 'Presupuestos',
+            tooltip: 'Presupuestos por categoría',
             onPressed: () => _showBudgetsSheet(context),
           ),
         ],
@@ -162,7 +171,7 @@ class _MiniStat extends StatelessWidget {
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: AppColors.surfaceRaised,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(3),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -319,7 +328,7 @@ class _TransactionRow extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 20),
         decoration: BoxDecoration(
           color: AppColors.coral.withValues(alpha: 0.15),
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(3),
         ),
         child: const Icon(Icons.delete_outline, color: AppColors.coral),
       ),
@@ -332,7 +341,7 @@ class _TransactionRow extends StatelessWidget {
               padding: const EdgeInsets.all(9),
               decoration: BoxDecoration(
                 color: transaction.category.color.withValues(alpha: 0.14),
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(3),
               ),
               child: Icon(transaction.category.icon, color: transaction.category.color, size: 18),
             ),
@@ -420,7 +429,7 @@ class _AddTransactionSheetState extends State<_AddTransactionSheet> {
         padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
         decoration: const BoxDecoration(
           color: AppColors.surfaceRaised,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+          border: Border(top: BorderSide(color: AppColors.border)),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -474,7 +483,7 @@ class _AddTransactionSheetState extends State<_AddTransactionSheet> {
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                     decoration: BoxDecoration(
                       color: selected ? c.color.withValues(alpha: 0.18) : AppColors.surface,
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(3),
                       border: Border.all(
                         color: selected ? c.color : AppColors.border,
                       ),
@@ -506,7 +515,7 @@ class _AddTransactionSheetState extends State<_AddTransactionSheet> {
                       );
                   Navigator.pop(context);
                 },
-                child: const Text('Guardar'),
+                child: const Text('GUARDAR'),
               ),
             ),
           ],
@@ -538,7 +547,7 @@ class _TypeToggle extends StatelessWidget {
         alignment: Alignment.center,
         decoration: BoxDecoration(
           color: selected ? color.withValues(alpha: 0.16) : AppColors.surface,
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(3),
           border: Border.all(color: selected ? color : AppColors.border),
         ),
         child: Text(
@@ -598,7 +607,7 @@ class _BudgetsSheetState extends State<_BudgetsSheet> {
           padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
           decoration: const BoxDecoration(
             color: AppColors.surfaceRaised,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+            border: Border(top: BorderSide(color: AppColors.border)),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -657,7 +666,7 @@ class _BudgetsSheetState extends State<_BudgetsSheet> {
                     }
                     Navigator.pop(context);
                   },
-                  child: const Text('Guardar presupuestos'),
+                  child: const Text('GUARDAR PRESUPUESTOS'),
                 ),
               ),
             ],

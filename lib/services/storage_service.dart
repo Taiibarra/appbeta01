@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/budget.dart';
+import '../models/fixed_money_item.dart';
 import '../models/goal.dart';
 import '../models/habit.dart';
 import '../models/journal_entry.dart';
@@ -14,6 +15,9 @@ class StorageService {
   static const _goalsKey = 'goals';
   static const _transactionsKey = 'transactions';
   static const _budgetsKey = 'budgets';
+  static const _userNameKey = 'user_name';
+  static const _fixedIncomesKey = 'fixed_incomes';
+  static const _fixedExpensesKey = 'fixed_expenses';
 
   Future<List<Habit>> loadHabits() async {
     final prefs = await SharedPreferences.getInstance();
@@ -89,5 +93,47 @@ class StorageService {
     final prefs = await SharedPreferences.getInstance();
     final raw = jsonEncode(budgets.map((b) => b.toJson()).toList());
     await prefs.setString(_budgetsKey, raw);
+  }
+
+  Future<String?> loadUserName() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_userNameKey);
+  }
+
+  Future<void> saveUserName(String name) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_userNameKey, name);
+  }
+
+  Future<List<FixedMoneyItem>> loadFixedIncomes() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_fixedIncomesKey);
+    if (raw == null) return [];
+    final list = jsonDecode(raw) as List;
+    return list
+        .map((e) => FixedMoneyItem.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  Future<void> saveFixedIncomes(List<FixedMoneyItem> items) async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = jsonEncode(items.map((i) => i.toJson()).toList());
+    await prefs.setString(_fixedIncomesKey, raw);
+  }
+
+  Future<List<FixedMoneyItem>> loadFixedExpenses() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_fixedExpensesKey);
+    if (raw == null) return [];
+    final list = jsonDecode(raw) as List;
+    return list
+        .map((e) => FixedMoneyItem.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  Future<void> saveFixedExpenses(List<FixedMoneyItem> items) async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = jsonEncode(items.map((i) => i.toJson()).toList());
+    await prefs.setString(_fixedExpensesKey, raw);
   }
 }

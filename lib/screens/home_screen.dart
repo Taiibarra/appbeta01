@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 import '../models/insight.dart';
@@ -38,10 +39,11 @@ class HomeScreen extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    _greeting(),
-                    style: const TextStyle(
-                      fontSize: 24,
+                    _greeting(appState.userName),
+                    style: GoogleFonts.barlowCondensed(
+                      fontSize: 28,
                       fontWeight: FontWeight.w700,
+                      letterSpacing: 0.3,
                       color: AppColors.textPrimary,
                     ),
                   ),
@@ -65,7 +67,7 @@ class HomeScreen extends StatelessWidget {
                 icon: Icons.check_circle_rounded,
                 value: totalHabits == 0 ? '-' : '$doneToday/$totalHabits',
                 label: 'Hábitos hoy',
-                color: AppColors.indigo,
+                color: AppColors.textPrimary,
               ),
             ),
             const SizedBox(width: 10),
@@ -74,7 +76,8 @@ class HomeScreen extends StatelessWidget {
                 icon: Icons.local_fire_department_rounded,
                 value: '$longestStreak',
                 label: 'Mejor racha',
-                color: AppColors.amber,
+                color: AppColors.rustLight,
+                highlight: true,
               ),
             ),
             const SizedBox(width: 10),
@@ -83,7 +86,7 @@ class HomeScreen extends StatelessWidget {
                 icon: Icons.account_balance_wallet_rounded,
                 value: formatMoney(appState.totalBalance),
                 label: 'Balance',
-                color: appState.totalBalance >= 0 ? AppColors.mint : AppColors.coral,
+                color: appState.totalBalance >= 0 ? AppColors.olive : AppColors.danger,
               ),
             ),
           ],
@@ -103,11 +106,15 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  String _greeting() {
+  String _greeting(String? name) {
     final hour = DateTime.now().hour;
-    if (hour < 12) return 'Buenos días';
-    if (hour < 19) return 'Buenas tardes';
-    return 'Buenas noches';
+    final base = hour < 12
+        ? 'Buenos días'
+        : hour < 19
+            ? 'Buenas tardes'
+            : 'Buenas noches';
+    final greeting = (name == null || name.isEmpty) ? base : '$base, $name';
+    return greeting.toUpperCase();
   }
 }
 
@@ -120,16 +127,16 @@ class _SectionLabel extends StatelessWidget {
     return Row(
       children: [
         Container(
-          width: 6,
-          height: 6,
-          decoration: const BoxDecoration(color: AppColors.mint, shape: BoxShape.circle),
+          width: 14,
+          height: 1,
+          color: AppColors.rust,
         ),
         const SizedBox(width: 8),
         Text(
           text.toUpperCase(),
-          style: const TextStyle(
-            fontSize: 11.5,
-            fontWeight: FontWeight.w700,
+          style: GoogleFonts.barlowCondensed(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
             letterSpacing: 0.8,
             color: AppColors.textMuted,
           ),

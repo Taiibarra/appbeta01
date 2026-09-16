@@ -1,34 +1,40 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-/// Design tokens for the dark, fintech-inspired look of the app.
-/// Kept as static constants (rather than scattering hex codes across
-/// screens) so the palette reads as one deliberate system.
+/// Design tokens for the "óxido industrial" look: warm near-black,
+/// bone text, a single oxide-rust accent, thin single-color borders
+/// instead of shadows, and condensed uppercase display type.
 class AppColors {
   AppColors._();
 
-  static const background = Color(0xFF0A0B0F);
-  static const surface = Color(0xFF14161D);
-  static const surfaceRaised = Color(0xFF1B1E27);
-  static const border = Color(0xFF272B36);
-  static const textPrimary = Color(0xFFF3F4F8);
-  static const textSecondary = Color(0xFF9BA1AC);
-  static const textMuted = Color(0xFF6B707C);
+  static const background = Color(0xFF17140F);
+  static const surface = Color(0xFF1B1710);
+  static const surfaceRaised = Color(0xFF211C14);
+  static const border = Color(0xFF3A3327);
+  static const borderAccent = Color(0xFFB5502E);
 
-  static const mint = Color(0xFF3DDC97);
-  static const indigo = Color(0xFF7C8CFF);
-  static const coral = Color(0xFFFF6B6B);
-  static const amber = Color(0xFFE8B84B);
-  static const sky = Color(0xFF5AC8FA);
+  static const textPrimary = Color(0xFFEDE3D3);
+  static const textSecondary = Color(0xFFA79A88);
+  static const textMuted = Color(0xFF7D7266);
 
-  static const gradientStart = Color(0xFF171B2B);
-  static const gradientEnd = Color(0xFF0F1119);
+  static const rust = Color(0xFFB5502E);
+  static const rustLight = Color(0xFFD97B58);
+  static const olive = Color(0xFF8A9A6B);
+  static const danger = Color(0xFFC23B2B);
+
+  // Legacy aliases kept so screens written against the previous
+  // palette (mood/category colors, etc.) keep resolving sensibly.
+  static const mint = olive;
+  static const indigo = rustLight;
+  static const coral = danger;
+  static const amber = rustLight;
+  static const sky = rustLight;
 }
 
 ThemeData buildAppTheme() {
   final base = ThemeData.dark(useMaterial3: true);
-  final display = GoogleFonts.spaceGroteskTextTheme(base.textTheme);
-  final body = GoogleFonts.interTextTheme(base.textTheme);
+  final display = GoogleFonts.barlowCondensedTextTheme(base.textTheme);
+  final body = GoogleFonts.barlowTextTheme(base.textTheme);
 
   final textTheme = body.copyWith(
     displayLarge: display.displayLarge?.copyWith(color: AppColors.textPrimary),
@@ -39,7 +45,7 @@ ThemeData buildAppTheme() {
     headlineSmall: display.headlineSmall?.copyWith(
         color: AppColors.textPrimary, fontWeight: FontWeight.w700),
     titleLarge: display.titleLarge?.copyWith(
-        color: AppColors.textPrimary, fontWeight: FontWeight.w600),
+        color: AppColors.textPrimary, fontWeight: FontWeight.w700),
     titleMedium: body.titleMedium?.copyWith(
         color: AppColors.textPrimary, fontWeight: FontWeight.w600),
     titleSmall: body.titleSmall?.copyWith(color: AppColors.textPrimary),
@@ -51,11 +57,11 @@ ThemeData buildAppTheme() {
 
   final colorScheme = const ColorScheme.dark(
     brightness: Brightness.dark,
-    primary: AppColors.mint,
-    onPrimary: Color(0xFF06231A),
-    secondary: AppColors.indigo,
-    onSecondary: Colors.white,
-    error: AppColors.coral,
+    primary: AppColors.rust,
+    onPrimary: AppColors.textPrimary,
+    secondary: AppColors.rustLight,
+    onSecondary: Color(0xFF231A12),
+    error: AppColors.danger,
     onError: Colors.white,
     surface: AppColors.surface,
     onSurface: AppColors.textPrimary,
@@ -67,7 +73,7 @@ ThemeData buildAppTheme() {
     colorScheme: colorScheme,
     scaffoldBackgroundColor: AppColors.background,
     textTheme: textTheme,
-    fontFamily: GoogleFonts.inter().fontFamily,
+    fontFamily: GoogleFonts.barlow().fontFamily,
     splashFactory: InkRipple.splashFactory,
     appBarTheme: AppBarTheme(
       backgroundColor: Colors.transparent,
@@ -78,33 +84,43 @@ ThemeData buildAppTheme() {
         color: AppColors.textPrimary,
         fontWeight: FontWeight.w700,
         fontSize: 24,
+        letterSpacing: 0.3,
       ),
     ),
     cardTheme: CardThemeData(
       elevation: 0,
       color: AppColors.surface,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-        side: const BorderSide(color: AppColors.border, width: 1),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.zero,
+        side: BorderSide(color: AppColors.border, width: 1),
       ),
       margin: EdgeInsets.zero,
     ),
     dividerTheme: const DividerThemeData(color: AppColors.border, thickness: 1),
+    floatingActionButtonTheme: FloatingActionButtonThemeData(
+      backgroundColor: AppColors.rust,
+      foregroundColor: AppColors.textPrimary,
+      elevation: 0,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(3)),
+    ),
     filledButtonTheme: FilledButtonThemeData(
       style: FilledButton.styleFrom(
-        backgroundColor: AppColors.mint,
-        foregroundColor: const Color(0xFF06231A),
-        textStyle: const TextStyle(fontWeight: FontWeight.w700),
+        backgroundColor: AppColors.rust,
+        foregroundColor: AppColors.textPrimary,
+        textStyle: const TextStyle(
+          fontWeight: FontWeight.w700,
+          letterSpacing: 0.4,
+        ),
         padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(3)),
       ),
     ),
     outlinedButtonTheme: OutlinedButtonThemeData(
       style: OutlinedButton.styleFrom(
         foregroundColor: AppColors.textPrimary,
-        side: const BorderSide(color: AppColors.border),
+        side: const BorderSide(color: AppColors.textPrimary),
         padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 18),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(3)),
       ),
     ),
     textButtonTheme: TextButtonThemeData(
@@ -116,38 +132,38 @@ ThemeData buildAppTheme() {
       fillColor: AppColors.surfaceRaised,
       hintStyle: const TextStyle(color: AppColors.textMuted),
       border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(3),
         borderSide: const BorderSide(color: AppColors.border),
       ),
       enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(3),
         borderSide: const BorderSide(color: AppColors.border),
       ),
       focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(14),
-        borderSide: const BorderSide(color: AppColors.mint, width: 1.5),
+        borderRadius: BorderRadius.circular(3),
+        borderSide: const BorderSide(color: AppColors.rust, width: 1.5),
       ),
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
     ),
     sliderTheme: SliderThemeData(
-      activeTrackColor: AppColors.mint,
+      activeTrackColor: AppColors.rust,
       inactiveTrackColor: AppColors.border,
-      thumbColor: AppColors.mint,
-      overlayColor: AppColors.mint.withValues(alpha: 0.15),
+      thumbColor: AppColors.rust,
+      overlayColor: AppColors.rust.withValues(alpha: 0.15),
     ),
     progressIndicatorTheme: const ProgressIndicatorThemeData(
-      color: AppColors.mint,
+      color: AppColors.rust,
       linearTrackColor: AppColors.border,
     ),
-    dialogTheme: DialogThemeData(
+    dialogTheme: const DialogThemeData(
       backgroundColor: AppColors.surfaceRaised,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      shape: RoundedRectangleBorder(
+        side: BorderSide(color: AppColors.border),
+      ),
     ),
     bottomSheetTheme: const BottomSheetThemeData(
       backgroundColor: AppColors.surfaceRaised,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-      ),
+      shape: RoundedRectangleBorder(side: BorderSide(color: AppColors.border)),
     ),
   );
 }

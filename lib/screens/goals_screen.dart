@@ -56,7 +56,7 @@ class GoalsScreen extends StatelessWidget {
                 padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
                 decoration: const BoxDecoration(
                   color: AppColors.surfaceRaised,
-                  borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+                  border: Border(top: BorderSide(color: AppColors.border)),
                 ),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -104,7 +104,7 @@ class GoalsScreen extends StatelessWidget {
                               .addGoal(title, descController.text.trim(), targetDate);
                           Navigator.pop(ctx);
                         },
-                        child: const Text('Agregar'),
+                        child: const Text('AGREGAR'),
                       ),
                     ),
                   ],
@@ -216,7 +216,7 @@ class _EmptyState extends StatelessWidget {
               style: TextStyle(color: AppColors.textMuted),
             ),
             const SizedBox(height: 20),
-            FilledButton(onPressed: onAdd, child: const Text('Crear meta')),
+            FilledButton(onPressed: onAdd, child: const Text('CREAR META')),
           ],
         ),
       ),
