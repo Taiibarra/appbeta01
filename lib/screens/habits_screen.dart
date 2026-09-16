@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 import '../models/habit.dart';
@@ -8,6 +9,17 @@ import '../widgets/app_card.dart';
 import 'habit_calendar_screen.dart';
 
 const _emojiOptions = ['💪', '📚', '🧘', '💧', '🏃', '😴', '🥗', '✍️', '🎯', '🚭'];
+
+const _habitPresets = [
+  ('Ir al gym', '💪'),
+  ('Leer 20 min', '📚'),
+  ('Meditar', '🧘'),
+  ('Tomar agua', '💧'),
+  ('Salir a correr', '🏃'),
+  ('Dormir temprano', '😴'),
+  ('Comer sano', '🥗'),
+  ('Sin fumar', '🚭'),
+];
 
 class HabitsScreen extends StatelessWidget {
   const HabitsScreen({super.key});
@@ -65,6 +77,37 @@ class HabitsScreen extends StatelessWidget {
                   children: [
                     const Text('Nuevo hábito',
                         style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+                    const SizedBox(height: 14),
+                    const Text('Sugerencias',
+                        style: TextStyle(fontSize: 11.5, color: AppColors.textMuted)),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: _habitPresets.map((preset) {
+                        return GestureDetector(
+                          onTap: () => setState(() {
+                            controller.text = preset.$1;
+                            selectedEmoji = preset.$2;
+                          }),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                            decoration: BoxDecoration(
+                              color: AppColors.surface,
+                              border: Border.all(color: AppColors.border),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(preset.$2, style: const TextStyle(fontSize: 14)),
+                                const SizedBox(width: 6),
+                                Text(preset.$1, style: const TextStyle(fontSize: 12.5)),
+                              ],
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                    ),
                     const SizedBox(height: 16),
                     TextField(
                       controller: controller,
@@ -118,13 +161,86 @@ class HabitsScreen extends StatelessWidget {
   }
 }
 
-class _HabitTile extends StatelessWidget {
+class _HabitTile extends StatefulWidget {
   final Habit habit;
   const _HabitTile({required this.habit});
 
   @override
-  Widget build(BuildContext context) {
+  State<_HabitTile> createState() => _HabitTileState();
+}
+
+class _HabitTileState extends State<_HabitTile> with SingleTickerProviderStateMixin {
+  late final AnimationController _bounceController;
+  late final Animation<double> _bounce;
+
+  @override
+  void initState() {
+    super.initState();
+    _bounceController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 280),
+    );
+    _bounce = TweenSequence<double>([
+      TweenSequenceItem(tween: Tween(begin: 1.0, end: 1.35), weight: 45),
+      TweenSequenceItem(tween: Tween(begin: 1.35, end: 1.0), weight: 55),
+    ]).animate(CurvedAnimation(parent: _bounceController, curve: Curves.easeOut));
+  }
+
+  @override
+  void dispose() {
+    _bounceController.dispose();
+    super.dispose();
+  }
+
+  void _onTap() {
     final appState = context.read<AppState>();
+    final habit = widget.habit;
+    final wasDone = habit.isCompletedOn(dateKey(DateTime.now()));
+
+    appState.toggleHabitToday(habit.id);
+
+    if (!wasDone) {
+      _bounceController.forward(from: 0);
+      final allDone = appState.habits.isNotEmpty &&
+          appState.todayCompletedCount == appState.habits.length;
+      if (allDone) _celebrate(context);
+    }
+  }
+
+  void _celebrate(BuildContext context) {
+    ScaffoldMessenger.of(context).clearSnackBars();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: AppColors.surfaceRaised,
+        shape: RoundedRectangleBorder(
+          side: const BorderSide(color: AppColors.rust),
+        ),
+        duration: const Duration(seconds: 2),
+        content: Row(
+          children: [
+            const Text('🔥', style: TextStyle(fontSize: 20)),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                '¡Completaste todos tus hábitos de hoy!',
+                style: GoogleFonts.barlowCondensed(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.3,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final habit = widget.habit;
     final doneToday = habit.isCompletedOn(dateKey(DateTime.now()));
 
     return AppCard(
@@ -132,7 +248,7 @@ class _HabitTile extends StatelessWidget {
       child: InkWell(
         borderRadius: BorderRadius.circular(3),
         onLongPress: () => _confirmDelete(context, habit),
-        onTap: () => appState.toggleHabitToday(habit.id),
+        onTap: _onTap,
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           child: Row(
@@ -169,10 +285,17 @@ class _HabitTile extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 4),
-              Icon(
-                doneToday ? Icons.check_circle_rounded : Icons.circle_outlined,
-                color: doneToday ? AppColors.mint : AppColors.textMuted,
-                size: 26,
+              AnimatedBuilder(
+                animation: _bounce,
+                builder: (context, child) => Transform.scale(
+                  scale: _bounce.value,
+                  child: child,
+                ),
+                child: Icon(
+                  doneToday ? Icons.check_circle_rounded : Icons.circle_outlined,
+                  color: doneToday ? AppColors.mint : AppColors.textMuted,
+                  size: 26,
+                ),
               ),
             ],
           ),

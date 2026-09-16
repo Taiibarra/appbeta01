@@ -8,6 +8,7 @@ import '../models/goal.dart';
 import '../models/habit.dart';
 import '../models/journal_entry.dart';
 import '../models/mood.dart';
+import '../models/piggy_bank.dart';
 import '../models/transaction.dart';
 import 'storage_service.dart';
 
@@ -15,6 +16,9 @@ const _uuid = Uuid();
 
 String dateKey(DateTime date) =>
     '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+
+String _monthKey(DateTime date) =>
+    '${date.year}-${date.month.toString().padLeft(2, '0')}';
 
 class AppState extends ChangeNotifier {
   final StorageService _storage = StorageService();
@@ -27,6 +31,7 @@ class AppState extends ChangeNotifier {
   List<FixedMoneyItem> fixedIncomes = [];
   List<FixedMoneyItem> fixedExpenses = [];
   List<SpendCategory> customCategories = [];
+  List<PiggyBank> piggyBanks = [];
   String? userName;
   bool loaded = false;
 
@@ -44,14 +49,66 @@ class AppState extends ChangeNotifier {
     fixedIncomes = await _storage.loadFixedIncomes();
     fixedExpenses = await _storage.loadFixedExpenses();
     customCategories = await _storage.loadCustomCategories();
+    piggyBanks = await _storage.loadPiggyBanks();
     userName = await _storage.loadUserName();
     final reminder = await _storage.loadReminderSettings();
     reminderEnabled = reminder.enabled;
     reminderHour = reminder.hour;
     reminderMinute = reminder.minute;
     lastReminderShownOn = await _storage.loadLastReminderShownOn();
+    await _applyDueFixedItems();
     loaded = true;
     notifyListeners();
+  }
+
+  /// Deposits/charges any fixed income or expense that hasn't already
+  /// fired this calendar month, as a real transaction — so fixed items
+  /// show up in Finanzas immediately and keep recurring automatically
+  /// every month without you having to log them by hand.
+  Future<void> _applyDueFixedItems() async {
+    final currentMonth = _monthKey(DateTime.now());
+    var changed = false;
+
+    for (final item in fixedIncomes) {
+      if (item.lastAppliedMonth != currentMonth) {
+        transactions.insert(
+          0,
+          Transaction(
+            id: _uuid.v4(),
+            categoryId: 'otroIngreso',
+            isIncome: true,
+            amount: item.amount,
+            note: item.label,
+            date: DateTime.now(),
+          ),
+        );
+        item.lastAppliedMonth = currentMonth;
+        changed = true;
+      }
+    }
+    for (final item in fixedExpenses) {
+      if (item.lastAppliedMonth != currentMonth) {
+        transactions.insert(
+          0,
+          Transaction(
+            id: _uuid.v4(),
+            categoryId: 'otroGasto',
+            isIncome: false,
+            amount: item.amount,
+            note: item.label,
+            date: DateTime.now(),
+          ),
+        );
+        item.lastAppliedMonth = currentMonth;
+        changed = true;
+      }
+    }
+
+    if (changed) {
+      await _storage.saveTransactions(transactions);
+      await _storage.saveFixedIncomes(fixedIncomes);
+      await _storage.saveFixedExpenses(fixedExpenses);
+    }
   }
 
   Future<void> setReminder({required bool enabled, required int hour, required int minute}) async {
@@ -336,10 +393,12 @@ class AppState extends ChangeNotifier {
     return map;
   }
 
-  // Fixed monthly budget (income vs. fixed expenses worksheet)
+  // Fixed monthly budget (income vs. fixed expenses worksheet). Adding one
+  // deposits/charges it into Finanzas immediately, then again automatically
+  // every new calendar month — see _applyDueFixedItems.
   Future<void> addFixedIncome(String label, double amount) async {
     fixedIncomes.add(FixedMoneyItem(id: _uuid.v4(), label: label, amount: amount));
-    await _storage.saveFixedIncomes(fixedIncomes);
+    await _applyDueFixedItems();
     notifyListeners();
   }
 
@@ -351,7 +410,7 @@ class AppState extends ChangeNotifier {
 
   Future<void> addFixedExpense(String label, double amount) async {
     fixedExpenses.add(FixedMoneyItem(id: _uuid.v4(), label: label, amount: amount));
-    await _storage.saveFixedExpenses(fixedExpenses);
+    await _applyDueFixedItems();
     notifyListeners();
   }
 
@@ -368,4 +427,74 @@ class AppState extends ChangeNotifier {
       fixedExpenses.fold(0.0, (sum, i) => sum + i.amount);
 
   double get fixedNet => totalFixedIncome - totalFixedExpenses;
+
+  // Piggy banks (alcancías) — independent money pools, unlike the shared
+  // "Ahorro" category savings goals draw from. Deposits/withdrawals flow
+  // through the real transaction ledger so Finanzas stays consistent.
+  Future<void> addPiggyBank({
+    required String name,
+    required String iconKey,
+    required Color color,
+    double? targetAmount,
+  }) async {
+    piggyBanks.add(PiggyBank(
+      id: _uuid.v4(),
+      name: name,
+      iconKey: iconKey,
+      color: color,
+      targetAmount: targetAmount,
+      createdAt: DateTime.now(),
+    ));
+    await _storage.savePiggyBanks(piggyBanks);
+    notifyListeners();
+  }
+
+  Future<void> deletePiggyBank(String id) async {
+    piggyBanks.removeWhere((b) => b.id == id);
+    await _storage.savePiggyBanks(piggyBanks);
+    notifyListeners();
+  }
+
+  Future<void> depositToPiggyBank(String id, double amount) async {
+    final bank = piggyBanks.firstWhere((b) => b.id == id);
+    bank.savedAmount += amount;
+    transactions.insert(
+      0,
+      Transaction(
+        id: _uuid.v4(),
+        categoryId: 'ahorro',
+        isIncome: false,
+        amount: amount,
+        note: 'Alcancía: ${bank.name}',
+        date: DateTime.now(),
+      ),
+    );
+    await _storage.savePiggyBanks(piggyBanks);
+    await _storage.saveTransactions(transactions);
+    notifyListeners();
+  }
+
+  Future<void> withdrawFromPiggyBank(String id, double amount) async {
+    final bank = piggyBanks.firstWhere((b) => b.id == id);
+    final actual = amount.clamp(0.0, bank.savedAmount);
+    if (actual <= 0) return;
+    bank.savedAmount -= actual;
+    transactions.insert(
+      0,
+      Transaction(
+        id: _uuid.v4(),
+        categoryId: 'ahorro',
+        isIncome: true,
+        amount: actual,
+        note: 'Retiro de alcancía: ${bank.name}',
+        date: DateTime.now(),
+      ),
+    );
+    await _storage.savePiggyBanks(piggyBanks);
+    await _storage.saveTransactions(transactions);
+    notifyListeners();
+  }
+
+  double get totalSavedInPiggyBanks =>
+      piggyBanks.fold(0.0, (sum, b) => sum + b.savedAmount);
 }

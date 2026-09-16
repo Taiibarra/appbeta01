@@ -8,6 +8,7 @@ import '../models/fixed_money_item.dart';
 import '../models/goal.dart';
 import '../models/habit.dart';
 import '../models/journal_entry.dart';
+import '../models/piggy_bank.dart';
 import '../models/transaction.dart';
 
 class ReminderSettings {
@@ -31,6 +32,7 @@ class StorageService {
   static const _reminderMinuteKey = 'reminder_minute';
   static const _lastReminderShownOnKey = 'last_reminder_shown_on';
   static const _customCategoriesKey = 'custom_categories';
+  static const _piggyBanksKey = 'piggy_banks';
 
   Future<List<Habit>> loadHabits() async {
     final prefs = await SharedPreferences.getInstance();
@@ -194,5 +196,19 @@ class StorageService {
     final prefs = await SharedPreferences.getInstance();
     final raw = jsonEncode(categories.map((c) => c.toJson()).toList());
     await prefs.setString(_customCategoriesKey, raw);
+  }
+
+  Future<List<PiggyBank>> loadPiggyBanks() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_piggyBanksKey);
+    if (raw == null) return [];
+    final list = jsonDecode(raw) as List;
+    return list.map((e) => PiggyBank.fromJson(e as Map<String, dynamic>)).toList();
+  }
+
+  Future<void> savePiggyBanks(List<PiggyBank> banks) async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = jsonEncode(banks.map((b) => b.toJson()).toList());
+    await prefs.setString(_piggyBanksKey, raw);
   }
 }

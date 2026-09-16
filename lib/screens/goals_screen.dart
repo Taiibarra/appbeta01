@@ -1,12 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
+import '../models/finance_category.dart';
 import '../models/goal.dart';
+import '../models/piggy_bank.dart';
 import '../services/app_state.dart';
 import '../services/date_format_es.dart';
 import '../services/money_format.dart';
 import '../theme.dart';
 import '../widgets/app_card.dart';
+import '../widgets/section_header.dart';
 
 class GoalsScreen extends StatelessWidget {
   const GoalsScreen({super.key});
@@ -15,6 +19,7 @@ class GoalsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final appState = context.watch<AppState>();
     final goals = appState.goals;
+    final banks = appState.piggyBanks;
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -23,14 +28,45 @@ class GoalsScreen extends StatelessWidget {
         onPressed: () => _showAddGoalSheet(context),
         child: const Icon(Icons.add),
       ),
-      body: goals.isEmpty
-          ? _EmptyState(onAdd: () => _showAddGoalSheet(context))
-          : ListView.separated(
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 100),
-              itemCount: goals.length,
-              separatorBuilder: (_, index) => const SizedBox(height: 12),
-              itemBuilder: (context, i) => _GoalCard(goal: goals[i]),
-            ),
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(20, 0, 20, 100),
+        children: [
+          SectionHeader(
+            title: 'Alcancías',
+            action: 'Agregar',
+            onAction: () => _showAddPiggyBankSheet(context),
+          ),
+          const SizedBox(height: 6),
+          const Text(
+            'Aparta dinero para un propósito específico — cada alcancía es un '
+            'monto independiente, no se mezcla con las demás.',
+            style: TextStyle(fontSize: 11.5, color: AppColors.textMuted, height: 1.4),
+          ),
+          const SizedBox(height: 12),
+          if (banks.isEmpty)
+            AppCard(
+              child: Text(
+                'Sin alcancías todavía.',
+                style: const TextStyle(fontSize: 13, color: AppColors.textMuted),
+              ),
+            )
+          else
+            ...banks.map((b) => Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: _PiggyBankCard(bank: b),
+                )),
+          const SizedBox(height: 28),
+          const SectionHeader(title: 'Metas'),
+          const SizedBox(height: 12),
+          if (goals.isEmpty)
+            const _EmptyGoals()
+          else
+            ...goals.map((g) => Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: _GoalCard(goal: g),
+                )),
+        ],
+      ),
     );
   }
 
@@ -161,6 +197,276 @@ class GoalsScreen extends StatelessWidget {
       },
     );
   }
+
+  void _showAddPiggyBankSheet(BuildContext context) {
+    final nameController = TextEditingController();
+    final targetController = TextEditingController();
+    String iconKey = 'compras';
+    Color color = categoryColorPalette.first;
+    bool hasTarget = false;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (ctx, setState) {
+            return Padding(
+              padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
+              child: Container(
+                padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
+                decoration: const BoxDecoration(
+                  color: AppColors.surfaceRaised,
+                  border: Border(top: BorderSide(color: AppColors.border)),
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Nueva alcancía',
+                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: nameController,
+                      autofocus: true,
+                      decoration: const InputDecoration(hintText: 'Ej. iPhone nuevo'),
+                    ),
+                    const SizedBox(height: 16),
+                    const Text('Ícono', style: TextStyle(fontSize: 12, color: AppColors.textMuted)),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: categoryIconPalette.entries.map((e) {
+                        final selected = e.key == iconKey;
+                        return GestureDetector(
+                          onTap: () => setState(() => iconKey = e.key),
+                          child: Container(
+                            padding: const EdgeInsets.all(9),
+                            decoration: BoxDecoration(
+                              color: selected ? color.withValues(alpha: 0.2) : AppColors.surface,
+                              border: Border.all(color: selected ? color : AppColors.border),
+                            ),
+                            child: Icon(e.value,
+                                size: 17, color: selected ? color : AppColors.textMuted),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                    const SizedBox(height: 16),
+                    const Text('Color', style: TextStyle(fontSize: 12, color: AppColors.textMuted)),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: categoryColorPalette.map((c) {
+                        final selected = c == color;
+                        return Padding(
+                          padding: const EdgeInsets.only(right: 10),
+                          child: GestureDetector(
+                            onTap: () => setState(() => color = c),
+                            child: Container(
+                              width: 28,
+                              height: 28,
+                              decoration: BoxDecoration(
+                                color: c,
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: selected ? AppColors.textPrimary : Colors.transparent,
+                                  width: 2,
+                                ),
+                              ),
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text('Ponerle una meta', style: TextStyle(fontSize: 13.5)),
+                        Switch(
+                          value: hasTarget,
+                          activeThumbColor: AppColors.rust,
+                          onChanged: (v) => setState(() => hasTarget = v),
+                        ),
+                      ],
+                    ),
+                    if (hasTarget) ...[
+                      const SizedBox(height: 8),
+                      TextField(
+                        controller: targetController,
+                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                        decoration:
+                            const InputDecoration(prefixText: '\$ ', hintText: 'Monto objetivo'),
+                      ),
+                    ],
+                    const SizedBox(height: 20),
+                    SizedBox(
+                      width: double.infinity,
+                      child: FilledButton(
+                        onPressed: () {
+                          final name = nameController.text.trim();
+                          if (name.isEmpty) return;
+                          double? target;
+                          if (hasTarget) {
+                            target = double.tryParse(targetController.text.replaceAll(',', '.'));
+                          }
+                          context.read<AppState>().addPiggyBank(
+                                name: name,
+                                iconKey: iconKey,
+                                color: color,
+                                targetAmount: target,
+                              );
+                          Navigator.pop(ctx);
+                        },
+                        child: const Text('CREAR ALCANCÍA'),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+}
+
+class _PiggyBankCard extends StatelessWidget {
+  final PiggyBank bank;
+  const _PiggyBankCard({required this.bank});
+
+  @override
+  Widget build(BuildContext context) {
+    final icon = categoryIconPalette[bank.iconKey] ?? Icons.savings_rounded;
+
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(color: bank.color.withValues(alpha: 0.16)),
+                child: Icon(icon, size: 16, color: bank.color),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(bank.name,
+                    style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
+              ),
+              IconButton(
+                icon: const Icon(Icons.delete_outline, size: 18, color: AppColors.textMuted),
+                onPressed: () => context.read<AppState>().deletePiggyBank(bank.id),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text.rich(
+            TextSpan(
+              children: [
+                TextSpan(
+                  text: formatMoney(bank.savedAmount),
+                  style: GoogleFonts.barlowCondensed(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+                if (bank.targetAmount != null)
+                  TextSpan(
+                    text: ' / ${formatMoney(bank.targetAmount!)}',
+                    style: const TextStyle(fontSize: 13, color: AppColors.textMuted),
+                  ),
+              ],
+            ),
+          ),
+          if (bank.targetAmount != null) ...[
+            const SizedBox(height: 8),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: LinearProgressIndicator(
+                value: bank.progress,
+                minHeight: 6,
+                backgroundColor: AppColors.surfaceRaised,
+                color: bank.color,
+              ),
+            ),
+          ],
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () => _showAmountDialog(
+                    context,
+                    title: 'Agregar dinero',
+                    onConfirm: (amount) =>
+                        context.read<AppState>().depositToPiggyBank(bank.id, amount),
+                  ),
+                  child: const Text('AGREGAR', style: TextStyle(fontSize: 12)),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: bank.savedAmount <= 0
+                      ? null
+                      : () => _showAmountDialog(
+                            context,
+                            title: 'Retirar dinero',
+                            max: bank.savedAmount,
+                            onConfirm: (amount) =>
+                                context.read<AppState>().withdrawFromPiggyBank(bank.id, amount),
+                          ),
+                  child: const Text('RETIRAR', style: TextStyle(fontSize: 12)),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showAmountDialog(
+    BuildContext context, {
+    required String title,
+    required ValueChanged<double> onConfirm,
+    double? max,
+  }) {
+    final controller = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(title),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          decoration: InputDecoration(
+            prefixText: '\$ ',
+            hintText: max != null ? 'Máximo ${formatMoney(max)}' : '0',
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('CANCELAR')),
+          TextButton(
+            onPressed: () {
+              final amount = double.tryParse(controller.text.replaceAll(',', '.'));
+              if (amount == null || amount <= 0) return;
+              onConfirm(amount);
+              Navigator.pop(ctx);
+            },
+            child: const Text('CONFIRMAR'),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _GoalCard extends StatelessWidget {
@@ -253,34 +559,25 @@ class _GoalCard extends StatelessWidget {
   }
 }
 
-class _EmptyState extends StatelessWidget {
-  final VoidCallback onAdd;
-  const _EmptyState({required this.onAdd});
+class _EmptyGoals extends StatelessWidget {
+  const _EmptyGoals();
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.flag_outlined, size: 56, color: AppColors.indigo),
-            const SizedBox(height: 16),
-            const Text(
-              'Aún no tienes metas',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              'Define una meta y da seguimiento a tu progreso.',
-              textAlign: TextAlign.center,
-              style: TextStyle(color: AppColors.textMuted),
-            ),
-            const SizedBox(height: 20),
-            FilledButton(onPressed: onAdd, child: const Text('CREAR META')),
-          ],
-        ),
+    return const AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Aún no tienes metas',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+          ),
+          SizedBox(height: 6),
+          Text(
+            'Usa el botón + para definir una meta y dar seguimiento a tu progreso.',
+            style: TextStyle(color: AppColors.textMuted, fontSize: 12.5, height: 1.4),
+          ),
+        ],
       ),
     );
   }

@@ -287,7 +287,7 @@ class _EssentialSplitCard extends StatelessWidget {
                       TextSpan(
                         style: const TextStyle(fontSize: 12.5, color: AppColors.textSecondary),
                         children: [
-                          const TextSpan(text: 'Lo que más te "gustó" gastar: '),
+                          const TextSpan(text: 'En lo que más gastaste: '),
                           TextSpan(
                             text: '${cat.label} (${formatMoney(top.value)})',
                             style: const TextStyle(

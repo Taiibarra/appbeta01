@@ -26,6 +26,24 @@ class FixedBudgetScreen extends StatelessWidget {
             'vistazo cuánto te queda libre cada mes.',
             style: TextStyle(fontSize: 13, color: AppColors.textSecondary, height: 1.5),
           ),
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(border: Border.all(color: AppColors.border)),
+            child: const Row(
+              children: [
+                Icon(Icons.info_outline_rounded, size: 16, color: AppColors.textMuted),
+                SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'Cada elemento que agregues aquí ya se refleja en tu balance de '
+                    'Finanzas — y se vuelve a aplicar solo cada mes nuevo.',
+                    style: TextStyle(fontSize: 11.5, color: AppColors.textMuted, height: 1.4),
+                  ),
+                ),
+              ],
+            ),
+          ),
           const SizedBox(height: 24),
           SectionHeader(
             title: 'Ingresos fijos',
