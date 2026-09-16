@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../models/finance_category.dart';
 import '../models/insight.dart';
 import 'app_state.dart';
 
@@ -128,14 +127,15 @@ void _financeInsights(AppState state, DateTime now, List<Insight> out) {
   }
 
   for (final budget in state.budgets) {
-    final spent = state.spentThisMonthFor(budget.category);
+    final spent = state.spentThisMonthFor(budget.categoryId);
     if (budget.monthlyLimit <= 0) continue;
     final ratio = spent / budget.monthlyLimit;
+    final label = state.categoryById(budget.categoryId).label;
     if (ratio >= 1) {
       out.add(Insight(
         icon: Icons.error_outline_rounded,
         title: 'Presupuesto superado',
-        message: 'Superaste tu presupuesto de ${budget.category.label} por \$${(spent - budget.monthlyLimit).toStringAsFixed(0)}.',
+        message: 'Superaste tu presupuesto de $label por \$${(spent - budget.monthlyLimit).toStringAsFixed(0)}.',
         type: InsightType.warning,
         priority: 8,
       ));
@@ -143,23 +143,40 @@ void _financeInsights(AppState state, DateTime now, List<Insight> out) {
       out.add(Insight(
         icon: Icons.warning_amber_rounded,
         title: 'Cerca del límite',
-        message: 'Vas en ${(ratio * 100).round()}% de tu presupuesto de ${budget.category.label} este mes.',
+        message: 'Vas en ${(ratio * 100).round()}% de tu presupuesto de $label este mes.',
         type: InsightType.warning,
         priority: 25,
       ));
     }
   }
+
+  final nonEssentialTotal = state.nonEssentialWeekTotal;
+  if (nonEssentialTotal > 0) {
+    final byCategory = state.nonEssentialWeekByCategory.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+    final top = byCategory.first;
+    final label = state.categoryById(top.key).label;
+    out.add(Insight(
+      icon: Icons.local_fire_department_outlined,
+      title: 'Gasto no esencial de la semana',
+      message:
+          'Esta semana llevas \$${nonEssentialTotal.toStringAsFixed(0)} en gastos que no son de primera necesidad — la mayoría en $label (\$${top.value.toStringAsFixed(0)}).',
+      type: InsightType.info,
+      priority: 40,
+    ));
+  }
 }
 
 void _goalInsights(AppState state, DateTime now, List<Insight> out) {
   for (final goal in state.goals) {
-    if (goal.done || goal.targetDate == null) continue;
+    if (state.effectiveDone(goal) || goal.targetDate == null) continue;
+    final progress = state.effectiveProgress(goal);
     final daysLeft = goal.targetDate!.difference(now).inDays;
-    if (daysLeft <= 7 && daysLeft >= 0 && goal.progress < 0.8) {
+    if (daysLeft <= 7 && daysLeft >= 0 && progress < 0.8) {
       out.add(Insight(
         icon: Icons.flag_circle_rounded,
         title: 'Meta próxima a vencer',
-        message: '"${goal.title}" vence en $daysLeft días y va en ${(goal.progress * 100).round()}%.',
+        message: '"${goal.title}" vence en $daysLeft días y va en ${(progress * 100).round()}%.',
         type: InsightType.warning,
         priority: 12,
       ));
@@ -167,7 +184,7 @@ void _goalInsights(AppState state, DateTime now, List<Insight> out) {
       out.add(Insight(
         icon: Icons.event_busy_rounded,
         title: 'Meta vencida',
-        message: '"${goal.title}" pasó su fecha objetivo con ${(goal.progress * 100).round()}% de progreso.',
+        message: '"${goal.title}" pasó su fecha objetivo con ${(progress * 100).round()}% de progreso.',
         type: InsightType.warning,
         priority: 18,
       ));

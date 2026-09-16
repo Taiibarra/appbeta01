@@ -49,6 +49,10 @@ class FinanceScreen extends StatelessWidget {
         children: [
           _BalanceHeader(appState: appState),
           const SizedBox(height: 20),
+          if (appState.thisWeekTransactions.any((t) => !t.isIncome)) ...[
+            _EssentialSplitCard(appState: appState),
+            const SizedBox(height: 20),
+          ],
           if (appState.transactions.isNotEmpty) ...[
             BalanceChart(transactions: appState.transactions),
             const SizedBox(height: 20),
@@ -65,9 +69,9 @@ class FinanceScreen extends StatelessWidget {
             ...appState.budgets.map((b) => Padding(
                   padding: const EdgeInsets.only(bottom: 10),
                   child: _BudgetRow(
-                    category: b.category,
+                    category: appState.categoryById(b.categoryId),
                     limit: b.monthlyLimit,
-                    spent: appState.spentThisMonthFor(b.category),
+                    spent: appState.spentThisMonthFor(b.categoryId),
                   ),
                 )),
             const SizedBox(height: 14),
@@ -200,6 +204,109 @@ class _MiniStat extends StatelessWidget {
   }
 }
 
+/// How much of this week's spending was on essentials vs. not — the
+/// weekly "where did the extra money go" view.
+class _EssentialSplitCard extends StatelessWidget {
+  final AppState appState;
+  const _EssentialSplitCard({required this.appState});
+
+  @override
+  Widget build(BuildContext context) {
+    final essential = appState.essentialWeekTotal;
+    final nonEssential = appState.nonEssentialWeekTotal;
+    final total = essential + nonEssential;
+    final nonEssentialRatio = total == 0 ? 0.0 : nonEssential / total;
+
+    final topNonEssential = appState.nonEssentialWeekByCategory.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('ESTA SEMANA: ESENCIAL VS. NO ESENCIAL',
+              style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.4,
+                  color: AppColors.textMuted)),
+          const SizedBox(height: 14),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(3),
+            child: SizedBox(
+              height: 10,
+              child: Row(
+                children: [
+                  Expanded(
+                    flex: ((1 - nonEssentialRatio) * 100).round().clamp(0, 100),
+                    child: Container(color: AppColors.olive),
+                  ),
+                  Expanded(
+                    flex: (nonEssentialRatio * 100).round().clamp(0, 100),
+                    child: Container(color: AppColors.rustLight),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 10),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Container(width: 8, height: 8, color: AppColors.olive),
+                  const SizedBox(width: 6),
+                  Text('Esencial · ${formatMoney(essential)}',
+                      style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                ],
+              ),
+              Row(
+                children: [
+                  Container(width: 8, height: 8, color: AppColors.rustLight),
+                  const SizedBox(width: 6),
+                  Text('No esencial · ${formatMoney(nonEssential)}',
+                      style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                ],
+              ),
+            ],
+          ),
+          if (topNonEssential.isNotEmpty) ...[
+            const SizedBox(height: 14),
+            const Divider(),
+            const SizedBox(height: 10),
+            Builder(builder: (context) {
+              final top = topNonEssential.first;
+              final cat = appState.categoryById(top.key);
+              return Row(
+                children: [
+                  Icon(cat.icon, size: 16, color: cat.color),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text.rich(
+                      TextSpan(
+                        style: const TextStyle(fontSize: 12.5, color: AppColors.textSecondary),
+                        children: [
+                          const TextSpan(text: 'Lo que más te "gustó" gastar: '),
+                          TextSpan(
+                            text: '${cat.label} (${formatMoney(top.value)})',
+                            style: const TextStyle(
+                                fontWeight: FontWeight.w700, color: AppColors.textPrimary),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            }),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
 class _CategoryBreakdown extends StatelessWidget {
   final AppState appState;
   const _CategoryBreakdown({required this.appState});
@@ -221,9 +328,10 @@ class _CategoryBreakdown extends StatelessWidget {
                 sectionsSpace: 2,
                 centerSpaceRadius: 34,
                 sections: data.map((e) {
+                  final cat = appState.categoryById(e.key);
                   return PieChartSectionData(
                     value: e.value,
-                    color: e.key.color,
+                    color: cat.color,
                     showTitle: false,
                     radius: 20,
                   );
@@ -236,6 +344,7 @@ class _CategoryBreakdown extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: data.take(5).map((e) {
+                final cat = appState.categoryById(e.key);
                 final pct = total == 0 ? 0 : (e.value / total * 100).round();
                 return Padding(
                   padding: const EdgeInsets.symmetric(vertical: 4),
@@ -244,11 +353,11 @@ class _CategoryBreakdown extends StatelessWidget {
                       Container(
                         width: 8,
                         height: 8,
-                        decoration: BoxDecoration(color: e.key.color, shape: BoxShape.circle),
+                        decoration: BoxDecoration(color: cat.color, shape: BoxShape.circle),
                       ),
                       const SizedBox(width: 8),
                       Expanded(
-                        child: Text(e.key.label,
+                        child: Text(cat.label,
                             style: const TextStyle(fontSize: 12.5),
                             overflow: TextOverflow.ellipsis),
                       ),
@@ -268,7 +377,7 @@ class _CategoryBreakdown extends StatelessWidget {
 }
 
 class _BudgetRow extends StatelessWidget {
-  final FinanceCategory category;
+  final SpendCategory category;
   final double limit;
   final double spent;
 
@@ -325,6 +434,9 @@ class _TransactionRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final appState = context.read<AppState>();
+    final category = appState.categoryById(transaction.categoryId);
+
     return Dismissible(
       key: ValueKey(transaction.id),
       direction: DismissDirection.endToStart,
@@ -345,10 +457,10 @@ class _TransactionRow extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(9),
               decoration: BoxDecoration(
-                color: transaction.category.color.withValues(alpha: 0.14),
+                color: category.color.withValues(alpha: 0.14),
                 borderRadius: BorderRadius.circular(3),
               ),
-              child: Icon(transaction.category.icon, color: transaction.category.color, size: 18),
+              child: Icon(category.icon, color: category.color, size: 18),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -356,13 +468,13 @@ class _TransactionRow extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    transaction.note.isNotEmpty ? transaction.note : transaction.category.label,
+                    transaction.note.isNotEmpty ? transaction.note : category.label,
                     style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
                     overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    '${transaction.category.label} · ${formatDateShortEs(transaction.date)}',
+                    '${category.label} · ${formatDateShortEs(transaction.date)}',
                     style: const TextStyle(fontSize: 11.5, color: AppColors.textMuted),
                   ),
                 ],
@@ -416,17 +528,18 @@ class _AddTransactionSheet extends StatefulWidget {
 
 class _AddTransactionSheetState extends State<_AddTransactionSheet> {
   bool isExpense = true;
-  FinanceCategory category = FinanceCategory.comida;
+  String? categoryId;
   final amountController = TextEditingController();
   final noteController = TextEditingController();
   DateTime date = DateTime.now();
 
   @override
   Widget build(BuildContext context) {
-    final categories = isExpense
-        ? FinanceCategoryX.expenseCategories
-        : FinanceCategoryX.incomeCategories;
-    if (!categories.contains(category)) category = categories.first;
+    final appState = context.watch<AppState>();
+    final categories = isExpense ? appState.expenseCategories : appState.incomeCategories;
+    if (categoryId == null || !categories.any((c) => c.id == categoryId)) {
+      categoryId = categories.first.id;
+    }
 
     return Padding(
       padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
@@ -480,30 +593,55 @@ class _AddTransactionSheetState extends State<_AddTransactionSheet> {
             Wrap(
               spacing: 8,
               runSpacing: 8,
-              children: categories.map((c) {
-                final selected = c == category;
-                return GestureDetector(
-                  onTap: () => setState(() => category = c),
+              children: [
+                ...categories.map((c) {
+                  final selected = c.id == categoryId;
+                  return GestureDetector(
+                    onTap: () => setState(() => categoryId = c.id),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: selected ? c.color.withValues(alpha: 0.18) : AppColors.surface,
+                        borderRadius: BorderRadius.circular(3),
+                        border: Border.all(
+                          color: selected ? c.color : AppColors.border,
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(c.icon, size: 14, color: c.color),
+                          const SizedBox(width: 6),
+                          Text(c.label, style: const TextStyle(fontSize: 12.5)),
+                        ],
+                      ),
+                    ),
+                  );
+                }),
+                GestureDetector(
+                  onTap: () async {
+                    final newId = await _showCreateCategorySheet(context, isIncome: !isExpense);
+                    if (newId != null) setState(() => categoryId = newId);
+                  },
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                     decoration: BoxDecoration(
-                      color: selected ? c.color.withValues(alpha: 0.18) : AppColors.surface,
+                      color: AppColors.surface,
                       borderRadius: BorderRadius.circular(3),
-                      border: Border.all(
-                        color: selected ? c.color : AppColors.border,
-                      ),
+                      border: Border.all(color: AppColors.border, style: BorderStyle.solid),
                     ),
-                    child: Row(
+                    child: const Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(c.icon, size: 14, color: c.color),
-                        const SizedBox(width: 6),
-                        Text(c.label, style: const TextStyle(fontSize: 12.5)),
+                        Icon(Icons.add_rounded, size: 14, color: AppColors.textMuted),
+                        SizedBox(width: 6),
+                        Text('Nueva categoría',
+                            style: TextStyle(fontSize: 12.5, color: AppColors.textMuted)),
                       ],
                     ),
                   ),
-                );
-              }).toList(),
+                ),
+              ],
             ),
             const SizedBox(height: 20),
             SizedBox(
@@ -511,9 +649,10 @@ class _AddTransactionSheetState extends State<_AddTransactionSheet> {
               child: FilledButton(
                 onPressed: () {
                   final amount = double.tryParse(amountController.text.replaceAll(',', '.'));
-                  if (amount == null || amount <= 0) return;
+                  if (amount == null || amount <= 0 || categoryId == null) return;
                   context.read<AppState>().addTransaction(
-                        category,
+                        categoryId!,
+                        !isExpense,
                         amount,
                         noteController.text.trim(),
                         date,
@@ -528,6 +667,142 @@ class _AddTransactionSheetState extends State<_AddTransactionSheet> {
       ),
     );
   }
+}
+
+/// Opens the "new category" sheet and, if saved, returns the new
+/// category's id so the caller can select it immediately.
+Future<String?> _showCreateCategorySheet(BuildContext context, {required bool isIncome}) {
+  final labelController = TextEditingController();
+  String iconKey = isIncome ? 'ingreso' : 'compras';
+  Color color = categoryColorPalette.first;
+  bool isEssential = false;
+
+  return showModalBottomSheet<String>(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: Colors.transparent,
+    builder: (ctx) {
+      return StatefulBuilder(
+        builder: (ctx, setState) {
+          return Padding(
+            padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
+            child: Container(
+              padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
+              decoration: const BoxDecoration(
+                color: AppColors.surfaceRaised,
+                border: Border(top: BorderSide(color: AppColors.border)),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Nueva categoría',
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: labelController,
+                    autofocus: true,
+                    decoration: const InputDecoration(hintText: 'Ej. Cigarros'),
+                  ),
+                  const SizedBox(height: 16),
+                  const Text('Ícono',
+                      style: TextStyle(fontSize: 12, color: AppColors.textMuted)),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: categoryIconPalette.entries.map((e) {
+                      final selected = e.key == iconKey;
+                      return GestureDetector(
+                        onTap: () => setState(() => iconKey = e.key),
+                        child: Container(
+                          padding: const EdgeInsets.all(9),
+                          decoration: BoxDecoration(
+                            color: selected ? color.withValues(alpha: 0.2) : AppColors.surface,
+                            border: Border.all(color: selected ? color : AppColors.border),
+                          ),
+                          child: Icon(e.value,
+                              size: 17, color: selected ? color : AppColors.textMuted),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                  const SizedBox(height: 16),
+                  const Text('Color',
+                      style: TextStyle(fontSize: 12, color: AppColors.textMuted)),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: categoryColorPalette.map((c) {
+                      final selected = c == color;
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 10),
+                        child: GestureDetector(
+                          onTap: () => setState(() => color = c),
+                          child: Container(
+                            width: 28,
+                            height: 28,
+                            decoration: BoxDecoration(
+                              color: c,
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: selected ? AppColors.textPrimary : Colors.transparent,
+                                width: 2,
+                              ),
+                            ),
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                  if (!isIncome) ...[
+                    const SizedBox(height: 16),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Expanded(
+                          child: Text(
+                            'Es de primera necesidad',
+                            style: TextStyle(fontSize: 13.5),
+                          ),
+                        ),
+                        Switch(
+                          value: isEssential,
+                          activeThumbColor: AppColors.rust,
+                          onChanged: (v) => setState(() => isEssential = v),
+                        ),
+                      ],
+                    ),
+                  ],
+                  const SizedBox(height: 20),
+                  SizedBox(
+                    width: double.infinity,
+                    child: FilledButton(
+                      onPressed: () async {
+                        final label = labelController.text.trim();
+                        if (label.isEmpty) return;
+                        final appState = context.read<AppState>();
+                        await appState.addCustomCategory(
+                          label: label,
+                          iconKey: iconKey,
+                          color: color,
+                          isIncome: isIncome,
+                          isEssential: isEssential,
+                        );
+                        if (ctx.mounted) {
+                          Navigator.pop(ctx, appState.customCategories.last.id);
+                        }
+                      },
+                      child: const Text('CREAR CATEGORÍA'),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      );
+    },
+  );
 }
 
 class _TypeToggle extends StatelessWidget {
@@ -575,17 +850,17 @@ class _BudgetsSheet extends StatefulWidget {
 }
 
 class _BudgetsSheetState extends State<_BudgetsSheet> {
-  late Map<FinanceCategory, TextEditingController> controllers;
+  late Map<String, TextEditingController> controllers;
 
   @override
   void initState() {
     super.initState();
     final appState = context.read<AppState>();
     controllers = {
-      for (final c in FinanceCategoryX.expenseCategories)
-        c: TextEditingController(
+      for (final c in appState.expenseCategories)
+        c.id: TextEditingController(
           text: appState.budgets
-              .where((b) => b.category == c)
+              .where((b) => b.categoryId == c.id)
               .map((b) => b.monthlyLimit.toStringAsFixed(0))
               .firstOrNull ??
               '',
@@ -603,6 +878,7 @@ class _BudgetsSheetState extends State<_BudgetsSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final appState = context.watch<AppState>();
     return DraggableScrollableSheet(
       initialChildSize: 0.85,
       maxChildSize: 0.92,
@@ -628,7 +904,14 @@ class _BudgetsSheetState extends State<_BudgetsSheet> {
               Expanded(
                 child: ListView(
                   controller: scrollController,
-                  children: FinanceCategoryX.expenseCategories.map((c) {
+                  children: appState.expenseCategories.map((c) {
+                    controllers.putIfAbsent(c.id, () => TextEditingController(
+                          text: appState.budgets
+                              .where((b) => b.categoryId == c.id)
+                              .map((b) => b.monthlyLimit.toStringAsFixed(0))
+                              .firstOrNull ??
+                              '',
+                        ));
                     return Padding(
                       padding: const EdgeInsets.only(bottom: 12),
                       child: Row(
@@ -639,7 +922,7 @@ class _BudgetsSheetState extends State<_BudgetsSheet> {
                           SizedBox(
                             width: 110,
                             child: TextField(
-                              controller: controllers[c],
+                              controller: controllers[c.id],
                               keyboardType: TextInputType.number,
                               textAlign: TextAlign.right,
                               decoration: const InputDecoration(

@@ -26,6 +26,7 @@ class AppState extends ChangeNotifier {
   List<Budget> budgets = [];
   List<FixedMoneyItem> fixedIncomes = [];
   List<FixedMoneyItem> fixedExpenses = [];
+  List<SpendCategory> customCategories = [];
   String? userName;
   bool loaded = false;
 
@@ -42,6 +43,7 @@ class AppState extends ChangeNotifier {
     budgets = await _storage.loadBudgets();
     fixedIncomes = await _storage.loadFixedIncomes();
     fixedExpenses = await _storage.loadFixedExpenses();
+    customCategories = await _storage.loadCustomCategories();
     userName = await _storage.loadUserName();
     final reminder = await _storage.loadReminderSettings();
     reminderEnabled = reminder.enabled;
@@ -173,7 +175,7 @@ class AppState extends ChangeNotifier {
   /// Total ever logged under the "Ahorro" category — the pool every
   /// financial goal's progress is measured against.
   double get totalSavedAllTime => transactions
-      .where((t) => t.category == FinanceCategory.ahorro)
+      .where((t) => t.categoryId == 'ahorro')
       .fold(0.0, (sum, t) => sum + t.amount);
 
   double effectiveProgress(Goal goal) {
@@ -186,8 +188,48 @@ class AppState extends ChangeNotifier {
       goal.isFinancial ? effectiveProgress(goal) >= 1.0 : goal.done;
 
   // Finance
+  List<SpendCategory> get allCategories => [...builtinCategories, ...customCategories];
+
+  List<SpendCategory> get incomeCategories =>
+      allCategories.where((c) => c.isIncome).toList(growable: false);
+
+  List<SpendCategory> get expenseCategories =>
+      allCategories.where((c) => !c.isIncome).toList(growable: false);
+
+  SpendCategory categoryById(String id) => allCategories.firstWhere(
+        (c) => c.id == id,
+        orElse: () => builtinCategories.firstWhere((c) => c.id == 'otroGasto'),
+      );
+
+  Future<void> addCustomCategory({
+    required String label,
+    required String iconKey,
+    required Color color,
+    required bool isIncome,
+    required bool isEssential,
+  }) async {
+    customCategories.add(SpendCategory(
+      id: _uuid.v4(),
+      label: label,
+      iconKey: iconKey,
+      color: color,
+      isIncome: isIncome,
+      isEssential: isEssential,
+      isCustom: true,
+    ));
+    await _storage.saveCustomCategories(customCategories);
+    notifyListeners();
+  }
+
+  Future<void> deleteCustomCategory(String id) async {
+    customCategories.removeWhere((c) => c.id == id);
+    await _storage.saveCustomCategories(customCategories);
+    notifyListeners();
+  }
+
   Future<void> addTransaction(
-    FinanceCategory category,
+    String categoryId,
+    bool isIncome,
     double amount,
     String note,
     DateTime date,
@@ -196,7 +238,8 @@ class AppState extends ChangeNotifier {
       0,
       Transaction(
         id: _uuid.v4(),
-        category: category,
+        categoryId: categoryId,
+        isIncome: isIncome,
         amount: amount,
         note: note,
         date: date,
@@ -212,19 +255,19 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> setBudget(FinanceCategory category, double monthlyLimit) async {
-    final index = budgets.indexWhere((b) => b.category == category);
+  Future<void> setBudget(String categoryId, double monthlyLimit) async {
+    final index = budgets.indexWhere((b) => b.categoryId == categoryId);
     if (index != -1) {
       budgets[index].monthlyLimit = monthlyLimit;
     } else {
-      budgets.add(Budget(category: category, monthlyLimit: monthlyLimit));
+      budgets.add(Budget(categoryId: categoryId, monthlyLimit: monthlyLimit));
     }
     await _storage.saveBudgets(budgets);
     notifyListeners();
   }
 
-  Future<void> removeBudget(FinanceCategory category) async {
-    budgets.removeWhere((b) => b.category == category);
+  Future<void> removeBudget(String categoryId) async {
+    budgets.removeWhere((b) => b.categoryId == categoryId);
     await _storage.saveBudgets(budgets);
     notifyListeners();
   }
@@ -251,20 +294,47 @@ class AppState extends ChangeNotifier {
 
   double get monthNet => monthIncome - monthExpense;
 
-  Map<FinanceCategory, double> get monthSpendByCategory {
-    final map = <FinanceCategory, double>{};
+  Map<String, double> get monthSpendByCategory {
+    final map = <String, double>{};
     for (final t in currentMonthTransactions.where((t) => !t.isIncome)) {
-      map[t.category] = (map[t.category] ?? 0) + t.amount;
+      map[t.categoryId] = (map[t.categoryId] ?? 0) + t.amount;
     }
     return map;
   }
 
-  double spentThisMonthFor(FinanceCategory category) =>
-      monthSpendByCategory[category] ?? 0.0;
+  double spentThisMonthFor(String categoryId) =>
+      monthSpendByCategory[categoryId] ?? 0.0;
 
   DateTime? get lastTransactionDate => transactions.isEmpty
       ? null
       : transactions.map((t) => t.date).reduce((a, b) => a.isAfter(b) ? a : b);
+
+  /// Monday 00:00 of the current calendar week.
+  DateTime get startOfWeek {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    return today.subtract(Duration(days: today.weekday - 1));
+  }
+
+  List<Transaction> get thisWeekTransactions =>
+      transactions.where((t) => !t.date.isBefore(startOfWeek)).toList();
+
+  double get essentialWeekTotal => thisWeekTransactions
+      .where((t) => !t.isIncome && categoryById(t.categoryId).isEssential)
+      .fold(0.0, (sum, t) => sum + t.amount);
+
+  double get nonEssentialWeekTotal => thisWeekTransactions
+      .where((t) => !t.isIncome && !categoryById(t.categoryId).isEssential)
+      .fold(0.0, (sum, t) => sum + t.amount);
+
+  Map<String, double> get nonEssentialWeekByCategory {
+    final map = <String, double>{};
+    for (final t in thisWeekTransactions
+        .where((t) => !t.isIncome && !categoryById(t.categoryId).isEssential)) {
+      map[t.categoryId] = (map[t.categoryId] ?? 0) + t.amount;
+    }
+    return map;
+  }
 
   // Fixed monthly budget (income vs. fixed expenses worksheet)
   Future<void> addFixedIncome(String label, double amount) async {

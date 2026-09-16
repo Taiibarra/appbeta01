@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/budget.dart';
+import '../models/finance_category.dart';
 import '../models/fixed_money_item.dart';
 import '../models/goal.dart';
 import '../models/habit.dart';
@@ -29,6 +30,7 @@ class StorageService {
   static const _reminderHourKey = 'reminder_hour';
   static const _reminderMinuteKey = 'reminder_minute';
   static const _lastReminderShownOnKey = 'last_reminder_shown_on';
+  static const _customCategoriesKey = 'custom_categories';
 
   Future<List<Habit>> loadHabits() async {
     final prefs = await SharedPreferences.getInstance();
@@ -176,5 +178,21 @@ class StorageService {
   Future<void> saveLastReminderShownOn(String dateKey) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_lastReminderShownOnKey, dateKey);
+  }
+
+  Future<List<SpendCategory>> loadCustomCategories() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_customCategoriesKey);
+    if (raw == null) return [];
+    final list = jsonDecode(raw) as List;
+    return list
+        .map((e) => SpendCategory.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  Future<void> saveCustomCategories(List<SpendCategory> categories) async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = jsonEncode(categories.map((c) => c.toJson()).toList());
+    await prefs.setString(_customCategoriesKey, raw);
   }
 }
