@@ -27,16 +27,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
       ..sort((a, b) => a.startMinute.compareTo(b.startMinute));
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Mi horario'),
-        actions: [
-          IconButton(
-            tooltip: 'Restaurar horario sugerido',
-            icon: const Icon(Icons.restart_alt_rounded, size: 21),
-            onPressed: () => _confirmReset(context),
-          ),
-        ],
-      ),
+      appBar: AppBar(title: const Text('Mi horario')),
       floatingActionButton: FloatingActionButton(
         onPressed: () => _showBlockSheet(context, null, _weekday),
         child: const Icon(Icons.add),
@@ -68,10 +59,25 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
           ),
           const SizedBox(height: 16),
           if (blocks.isEmpty)
-            const Padding(
-              padding: EdgeInsets.only(top: 40),
-              child: Center(
-                child: Text('Sin bloques este día.', style: TextStyle(color: AppColors.textMuted)),
+            Padding(
+              padding: const EdgeInsets.only(top: 40),
+              child: Column(
+                children: [
+                  const Text('Sin bloques este día',
+                      style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Agrega tus bloques: trabajo, gym, ventanas para tus negocios y descanso. '
+                    'Al crear uno puedes marcar varios días a la vez.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: AppColors.textMuted),
+                  ),
+                  const SizedBox(height: 20),
+                  FilledButton(
+                    onPressed: () => _showBlockSheet(context, null, _weekday),
+                    child: const Text('AGREGAR BLOQUE'),
+                  ),
+                ],
               ),
             ),
           ...blocks.map((b) => Padding(
@@ -107,34 +113,19 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
       ),
     );
   }
-
-  void _confirmReset(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Restaurar horario'),
-        content: const Text('Se reemplazan todos tus bloques por el horario sugerido.'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('CANCELAR')),
-          TextButton(
-            onPressed: () {
-              context.read<AppState>().resetDayBlocks();
-              Navigator.pop(ctx);
-            },
-            child: const Text('RESTAURAR'),
-          ),
-        ],
-      ),
-    );
-  }
 }
 
 void _showBlockSheet(BuildContext context, DayBlock? existing, int weekday) {
   final appState = context.read<AppState>();
   final label = TextEditingController(text: existing?.label ?? '');
-  var kind = existing?.kind ?? BlockKind.negocio;
-  var start = existing?.startMinute ?? 19 * 60;
-  var end = existing?.endMinute ?? 20 * 60;
+  // A new block picks up where that day's last block ends, so building
+  // the day top to bottom is mostly just choosing the end time.
+  final lastEnd = appState.dayBlocks
+      .where((b) => b.weekdays.contains(weekday))
+      .fold<int?>(null, (m, b) => m == null || b.endMinute > m ? b.endMinute : m);
+  var kind = existing?.kind ?? BlockKind.trabajo;
+  var start = existing?.startMinute ?? lastEnd ?? 6 * 60;
+  var end = existing?.endMinute ?? (start + 60).clamp(0, 23 * 60 + 59);
   final days = {...?existing?.weekdays, if (existing == null) weekday};
 
   Future<int?> pickTime(BuildContext ctx, int minute) async {

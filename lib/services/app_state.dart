@@ -56,7 +56,7 @@ class AppState extends ChangeNotifier {
     fixedExpenses = await _storage.loadFixedExpenses();
     customCategories = await _storage.loadCustomCategories();
     piggyBanks = await _storage.loadPiggyBanks();
-    dayBlocks = await _storage.loadDayBlocks() ?? defaultDayBlocks();
+    dayBlocks = await _storage.loadDayBlocks();
     businesses = await _storage.loadBusinesses() ?? defaultBusinesses();
     leads = await _storage.loadLeads();
     businessActions = await _storage.loadBusinessActions();
@@ -557,12 +557,6 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> resetDayBlocks() async {
-    dayBlocks = defaultDayBlocks();
-    await _storage.saveDayBlocks(dayBlocks);
-    notifyListeners();
-  }
-
   Business businessById(String id) =>
       businesses.firstWhere((b) => b.id == id, orElse: () => businesses.first);
 
@@ -673,38 +667,6 @@ class DayClose {
     required this.resolved,
     required this.carriedOver,
   });
-}
-
-const _weekdays = [1, 2, 3, 4, 5];
-
-int _m(int h, [int m = 0]) => h * 60 + m;
-
-/// Starting routine built around a 6 am wake-up and an 8–5 job, with
-/// short business windows at the edges of the workday and after the gym.
-List<DayBlock> defaultDayBlocks() {
-  DayBlock b(String label, BlockKind kind, int start, int end, List<int> days) =>
-      DayBlock(
-        id: _uuid.v4(),
-        label: label,
-        kind: kind,
-        startMinute: start,
-        endMinute: end,
-        weekdays: days,
-      );
-  return [
-    b('Despertar y alistarte', BlockKind.descanso, _m(6), _m(7, 30), _weekdays),
-    b('Ventana rápida', BlockKind.negocio, _m(7, 30), _m(8), _weekdays),
-    b('Trabajo', BlockKind.trabajo, _m(8), _m(12, 30), _weekdays),
-    b('Comida · ventana', BlockKind.negocio, _m(12, 30), _m(13, 30), _weekdays),
-    b('Trabajo', BlockKind.trabajo, _m(13, 30), _m(17), _weekdays),
-    b('Gym', BlockKind.gym, _m(17, 30), _m(19), _weekdays),
-    b('Ventana principal', BlockKind.negocio, _m(19, 30), _m(21), _weekdays),
-    b('Descanso', BlockKind.descanso, _m(21), _m(23), _weekdays),
-    b('Gym', BlockKind.gym, _m(9), _m(10, 30), [6]),
-    b('Citas y visitas', BlockKind.negocio, _m(10, 30), _m(14), [6]),
-    b('Descanso', BlockKind.descanso, _m(14), _m(23), [6]),
-    b('Ventana corta', BlockKind.negocio, _m(11), _m(13), [7]),
-  ];
 }
 
 List<Business> defaultBusinesses() => [

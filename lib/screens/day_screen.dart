@@ -52,10 +52,7 @@ class _DayScreenState extends State<DayScreen> {
           IconButton(
             tooltip: 'Editar horario',
             icon: const Icon(Icons.edit_calendar_outlined, size: 21),
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const ScheduleScreen()),
-            ),
+            onPressed: () => _openSchedule(context),
           ),
         ],
       ),
@@ -79,8 +76,32 @@ class _DayScreenState extends State<DayScreen> {
           const SectionHeader(title: 'Hoy'),
           const SizedBox(height: 12),
           if (blocks.isEmpty)
-            const Text('No tienes bloques para hoy. Toca el calendario arriba para armarlos.',
-                style: TextStyle(color: AppColors.textMuted))
+            AppCard(
+              onTap: () => _openSchedule(context),
+              child: Row(
+                children: [
+                  const Icon(Icons.edit_calendar_outlined, color: AppColors.rust),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          appState.dayBlocks.isEmpty ? 'Arma tu día' : 'Nada planeado para hoy',
+                          style: const TextStyle(fontWeight: FontWeight.w700),
+                        ),
+                        const SizedBox(height: 2),
+                        const Text(
+                          'Define tus bloques y ventanas de negocio.',
+                          style: TextStyle(fontSize: 12.5, color: AppColors.textMuted),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Icon(Icons.chevron_right_rounded, color: AppColors.textMuted),
+                ],
+              ),
+            )
           else
             _Timeline(blocks: blocks, current: appState.currentBlock),
           const SizedBox(height: 24),
@@ -92,6 +113,11 @@ class _DayScreenState extends State<DayScreen> {
     );
   }
 }
+
+void _openSchedule(BuildContext context) => Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const ScheduleScreen()),
+    );
 
 class _NowCard extends StatelessWidget {
   final AppState appState;

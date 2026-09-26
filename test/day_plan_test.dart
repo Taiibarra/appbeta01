@@ -9,15 +9,36 @@ void main() {
 
   setUp(() => SharedPreferences.setMockInitialValues({}));
 
-  test('seeds the default routine and businesses on first load', () async {
+  test('starts with an empty schedule the user builds', () async {
     final state = AppState();
     await state.load();
+    expect(state.dayBlocks, isEmpty);
+    expect(state.currentBlock, isNull);
+
+    await state.addDayBlock(DayBlock(
+      id: 'w',
+      label: 'Trabajo',
+      kind: BlockKind.trabajo,
+      startMinute: 8 * 60,
+      endMinute: 17 * 60,
+      weekdays: [1, 2, 3, 4, 5],
+    ));
+    await state.addDayBlock(DayBlock(
+      id: 'n',
+      label: 'Ventana principal',
+      kind: BlockKind.negocio,
+      startMinute: 19 * 60 + 30,
+      endMinute: 21 * 60,
+      weekdays: [1, 2, 3, 4, 5],
+    ));
     expect(state.businesses.map((b) => b.name), ['Carros', 'Viajes']);
-    final monday = DateTime(2026, 9, 21);
     expect(state.blockAt(DateTime(2026, 9, 21, 10))?.kind, BlockKind.trabajo);
-    expect(state.blockAt(DateTime(2026, 9, 21, 12, 45))?.kind, BlockKind.negocio);
-    expect(state.blockAt(DateTime(2026, 9, 21, 18))?.kind, BlockKind.gym);
-    expect(state.blocksFor(monday).first.startMinute, 6 * 60);
+    expect(state.isBusinessWindow(DateTime(2026, 9, 21, 20)), isTrue);
+    expect(state.blockAt(DateTime(2026, 9, 26, 10)), isNull); // sábado
+
+    final reloaded = AppState();
+    await reloaded.load();
+    expect(reloaded.dayBlocks.length, 2);
   });
 
   test('captures queue up and closing one counts as resolved today', () async {

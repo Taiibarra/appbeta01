@@ -218,12 +218,10 @@ class StorageService {
     await prefs.setString(_piggyBanksKey, raw);
   }
 
-  /// Null means the schedule was never set up, so defaults get seeded;
-  /// an empty list means the user deliberately cleared it.
-  Future<List<DayBlock>?> loadDayBlocks() async {
+  Future<List<DayBlock>> loadDayBlocks() async {
     final prefs = await SharedPreferences.getInstance();
     final raw = prefs.getString(_dayBlocksKey);
-    if (raw == null) return null;
+    if (raw == null) return [];
     final list = jsonDecode(raw) as List;
     return list.map((e) => DayBlock.fromJson(e as Map<String, dynamic>)).toList();
   }
