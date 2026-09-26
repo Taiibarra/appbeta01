@@ -10,6 +10,7 @@ import '../services/notification_service.dart';
 import '../services/quotes.dart';
 import '../theme.dart';
 import '../widgets/insight_card.dart';
+import '../widgets/quick_capture_sheet.dart';
 import '../widgets/section_header.dart';
 import '../widgets/stat_tile.dart';
 
@@ -54,6 +55,15 @@ class HomeScreen extends StatelessWidget {
                 ],
               ),
             ),
+            GestureDetector(
+              onTap: () => showQuickCaptureSheet(context),
+              child: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(border: Border.all(color: AppColors.border)),
+                child: const Icon(Icons.bolt_rounded, size: 18, color: AppColors.rust),
+              ),
+            ),
+            const SizedBox(width: 8),
             GestureDetector(
               onTap: () => _showReminderSheet(context),
               child: Container(

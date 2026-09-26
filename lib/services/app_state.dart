@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:uuid/uuid.dart';
 
 import '../models/budget.dart';
+import '../models/business.dart';
+import '../models/day_block.dart';
 import '../models/finance_category.dart';
 import '../models/fixed_money_item.dart';
 import '../models/goal.dart';
@@ -32,6 +34,10 @@ class AppState extends ChangeNotifier {
   List<FixedMoneyItem> fixedExpenses = [];
   List<SpendCategory> customCategories = [];
   List<PiggyBank> piggyBanks = [];
+  List<DayBlock> dayBlocks = [];
+  List<Business> businesses = [];
+  List<Lead> leads = [];
+  List<DateTime> businessActions = [];
   String? userName;
   bool loaded = false;
 
@@ -50,6 +56,10 @@ class AppState extends ChangeNotifier {
     fixedExpenses = await _storage.loadFixedExpenses();
     customCategories = await _storage.loadCustomCategories();
     piggyBanks = await _storage.loadPiggyBanks();
+    dayBlocks = await _storage.loadDayBlocks() ?? defaultDayBlocks();
+    businesses = await _storage.loadBusinesses() ?? defaultBusinesses();
+    leads = await _storage.loadLeads();
+    businessActions = await _storage.loadBusinessActions();
     userName = await _storage.loadUserName();
     final reminder = await _storage.loadReminderSettings();
     reminderEnabled = reminder.enabled;
@@ -497,4 +507,207 @@ class AppState extends ChangeNotifier {
 
   double get totalSavedInPiggyBanks =>
       piggyBanks.fold(0.0, (sum, b) => sum + b.savedAmount);
+
+  // Mi Día — routine blocks, quick-capture queues per business and the
+  // end-of-day review. Captures can happen anytime; *attending* them is
+  // meant for business windows, so every attend action is timestamped to
+  // tell inside-window work from interruptions.
+  List<DayBlock> blocksFor(DateTime day) =>
+      dayBlocks.where((b) => b.appliesOn(day)).toList()
+        ..sort((a, b) => a.startMinute.compareTo(b.startMinute));
+
+  DayBlock? blockAt(DateTime time) {
+    final minute = time.hour * 60 + time.minute;
+    for (final b in blocksFor(time)) {
+      if (b.containsMinute(minute)) return b;
+    }
+    return null;
+  }
+
+  DayBlock? get currentBlock => blockAt(DateTime.now());
+
+  DayBlock? get nextBlock {
+    final now = DateTime.now();
+    final minute = now.hour * 60 + now.minute;
+    for (final b in blocksFor(now)) {
+      if (b.startMinute > minute) return b;
+    }
+    return null;
+  }
+
+  bool isBusinessWindow(DateTime time) => blockAt(time)?.kind == BlockKind.negocio;
+
+  Future<void> addDayBlock(DayBlock block) async {
+    dayBlocks.add(block);
+    await _storage.saveDayBlocks(dayBlocks);
+    notifyListeners();
+  }
+
+  Future<void> updateDayBlock(DayBlock block) async {
+    final i = dayBlocks.indexWhere((b) => b.id == block.id);
+    if (i == -1) return;
+    dayBlocks[i] = block;
+    await _storage.saveDayBlocks(dayBlocks);
+    notifyListeners();
+  }
+
+  Future<void> deleteDayBlock(String id) async {
+    dayBlocks.removeWhere((b) => b.id == id);
+    await _storage.saveDayBlocks(dayBlocks);
+    notifyListeners();
+  }
+
+  Future<void> resetDayBlocks() async {
+    dayBlocks = defaultDayBlocks();
+    await _storage.saveDayBlocks(dayBlocks);
+    notifyListeners();
+  }
+
+  Business businessById(String id) =>
+      businesses.firstWhere((b) => b.id == id, orElse: () => businesses.first);
+
+  List<Lead> leadsFor(String businessId, LeadStage stage) => leads
+      .where((l) => l.businessId == businessId && l.stage == stage)
+      .toList()
+    ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
+
+  /// Captured but not yet attended — what's waiting when a window opens.
+  List<Lead> queueFor(String businessId) => leadsFor(businessId, LeadStage.nuevo);
+
+  int get totalQueued => leads.where((l) => l.stage == LeadStage.nuevo).length;
+
+  List<Lead> coolingFor(String businessId) =>
+      leads.where((l) => l.businessId == businessId && l.isCooling).toList();
+
+  Future<void> addLead(String businessId, String text) async {
+    final now = DateTime.now();
+    leads.add(Lead(
+      id: _uuid.v4(),
+      businessId: businessId,
+      text: text,
+      createdAt: now,
+      updatedAt: now,
+    ));
+    await _storage.saveLeads(leads);
+    notifyListeners();
+  }
+
+  Future<void> moveLead(String id, LeadStage stage) async {
+    final lead = leads.firstWhere((l) => l.id == id);
+    final now = DateTime.now();
+    lead.stage = stage;
+    lead.updatedAt = now;
+    lead.closedAt = stage.isOpen ? null : now;
+    await _logBusinessAction(now);
+    await _storage.saveLeads(leads);
+    notifyListeners();
+  }
+
+  Future<void> updateLeadText(String id, String text) async {
+    final lead = leads.firstWhere((l) => l.id == id);
+    lead.text = text;
+    lead.updatedAt = DateTime.now();
+    await _storage.saveLeads(leads);
+    notifyListeners();
+  }
+
+  Future<void> deleteLead(String id) async {
+    leads.removeWhere((l) => l.id == id);
+    await _storage.saveLeads(leads);
+    notifyListeners();
+  }
+
+  Future<void> _logBusinessAction(DateTime at) async {
+    final cutoff = at.subtract(const Duration(days: 30));
+    businessActions
+      ..removeWhere((a) => a.isBefore(cutoff))
+      ..add(at);
+    await _storage.saveBusinessActions(businessActions);
+  }
+
+  DayClose get todayClose {
+    final now = DateTime.now();
+    final today = dateKey(now);
+    final minuteNow = now.hour * 60 + now.minute;
+    final windows = blocksFor(now)
+        .where((b) => b.kind == BlockKind.negocio && b.startMinute <= minuteNow)
+        .toList();
+    final actionsToday = businessActions.where((a) => dateKey(a) == today).toList();
+
+    var attended = 0;
+    for (final w in windows) {
+      final hit = actionsToday.any((a) => w.containsMinute(a.hour * 60 + a.minute));
+      if (hit) attended++;
+    }
+    final inside = actionsToday.where(isBusinessWindow).length;
+
+    return DayClose(
+      windowsSoFar: windows.length,
+      windowsAttended: attended,
+      actionsInWindow: inside,
+      actionsOutside: actionsToday.length - inside,
+      captured: leads.where((l) => dateKey(l.createdAt) == today).length,
+      resolved: leads
+          .where((l) => l.closedAt != null && dateKey(l.closedAt!) == today)
+          .length,
+      carriedOver: totalQueued,
+    );
+  }
 }
+
+class DayClose {
+  final int windowsSoFar;
+  final int windowsAttended;
+  final int actionsInWindow;
+  final int actionsOutside;
+  final int captured;
+  final int resolved;
+  final int carriedOver;
+
+  const DayClose({
+    required this.windowsSoFar,
+    required this.windowsAttended,
+    required this.actionsInWindow,
+    required this.actionsOutside,
+    required this.captured,
+    required this.resolved,
+    required this.carriedOver,
+  });
+}
+
+const _weekdays = [1, 2, 3, 4, 5];
+
+int _m(int h, [int m = 0]) => h * 60 + m;
+
+/// Starting routine built around a 6 am wake-up and an 8–5 job, with
+/// short business windows at the edges of the workday and after the gym.
+List<DayBlock> defaultDayBlocks() {
+  DayBlock b(String label, BlockKind kind, int start, int end, List<int> days) =>
+      DayBlock(
+        id: _uuid.v4(),
+        label: label,
+        kind: kind,
+        startMinute: start,
+        endMinute: end,
+        weekdays: days,
+      );
+  return [
+    b('Despertar y alistarte', BlockKind.descanso, _m(6), _m(7, 30), _weekdays),
+    b('Ventana rápida', BlockKind.negocio, _m(7, 30), _m(8), _weekdays),
+    b('Trabajo', BlockKind.trabajo, _m(8), _m(12, 30), _weekdays),
+    b('Comida · ventana', BlockKind.negocio, _m(12, 30), _m(13, 30), _weekdays),
+    b('Trabajo', BlockKind.trabajo, _m(13, 30), _m(17), _weekdays),
+    b('Gym', BlockKind.gym, _m(17, 30), _m(19), _weekdays),
+    b('Ventana principal', BlockKind.negocio, _m(19, 30), _m(21), _weekdays),
+    b('Descanso', BlockKind.descanso, _m(21), _m(23), _weekdays),
+    b('Gym', BlockKind.gym, _m(9), _m(10, 30), [6]),
+    b('Citas y visitas', BlockKind.negocio, _m(10, 30), _m(14), [6]),
+    b('Descanso', BlockKind.descanso, _m(14), _m(23), [6]),
+    b('Ventana corta', BlockKind.negocio, _m(11), _m(13), [7]),
+  ];
+}
+
+List<Business> defaultBusinesses() => [
+      Business(id: 'carros', name: 'Carros', emoji: '🚗', closedLabel: 'Vendido'),
+      Business(id: 'viajes', name: 'Viajes', emoji: '✈️', closedLabel: 'Reservado'),
+    ];

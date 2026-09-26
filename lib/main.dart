@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import 'models/day_block.dart';
+import 'screens/day_screen.dart';
 import 'screens/finance_screen.dart';
 import 'screens/goals_screen.dart';
 import 'screens/habits_screen.dart';
@@ -47,6 +49,7 @@ class RootScreen extends StatefulWidget {
 class _RootScreenState extends State<RootScreen> {
   int _index = 0;
   Timer? _reminderTimer;
+  String? _lastWindowNotified;
 
   @override
   void initState() {
@@ -63,7 +66,9 @@ class _RootScreenState extends State<RootScreen> {
 
   void _checkReminder() {
     final appState = context.read<AppState>();
-    if (!appState.loaded || !appState.shouldShowReminderNow) return;
+    if (!appState.loaded) return;
+    _checkBusinessWindow(appState);
+    if (!appState.shouldShowReminderNow) return;
     appState.markReminderShownToday();
     final pending = appState.habits.length - appState.todayCompletedCount;
     final body = appState.habits.isEmpty
@@ -74,8 +79,24 @@ class _RootScreenState extends State<RootScreen> {
     NotificationService.show('OrgApp', body);
   }
 
+  /// Pings once when a business window opens with captures waiting.
+  void _checkBusinessWindow(AppState appState) {
+    final block = appState.currentBlock;
+    if (block == null || block.kind != BlockKind.negocio) return;
+    final key = '${dateKey(DateTime.now())}-${block.id}';
+    if (_lastWindowNotified == key) return;
+    _lastWindowNotified = key;
+    final queued = appState.totalQueued;
+    if (queued == 0) return;
+    NotificationService.show(
+      'Ventana de negocio abierta',
+      '${block.label}: tienes $queued pendiente${queued == 1 ? '' : 's'} en cola.',
+    );
+  }
+
   final _screens = const [
     HomeScreen(),
+    DayScreen(),
     HabitsScreen(),
     JournalScreen(),
     FinanceScreen(),
@@ -84,6 +105,7 @@ class _RootScreenState extends State<RootScreen> {
 
   static const _navItems = [
     NavItem(icon: Icons.home_outlined, activeIcon: Icons.home_rounded, label: 'Inicio'),
+    NavItem(icon: Icons.schedule_outlined, activeIcon: Icons.schedule_rounded, label: 'Mi día'),
     NavItem(
         icon: Icons.check_circle_outline_rounded,
         activeIcon: Icons.check_circle_rounded,

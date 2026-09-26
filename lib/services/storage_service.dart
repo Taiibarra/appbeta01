@@ -3,6 +3,8 @@ import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/budget.dart';
+import '../models/business.dart';
+import '../models/day_block.dart';
 import '../models/finance_category.dart';
 import '../models/fixed_money_item.dart';
 import '../models/goal.dart';
@@ -33,6 +35,10 @@ class StorageService {
   static const _lastReminderShownOnKey = 'last_reminder_shown_on';
   static const _customCategoriesKey = 'custom_categories';
   static const _piggyBanksKey = 'piggy_banks';
+  static const _dayBlocksKey = 'day_blocks';
+  static const _businessesKey = 'businesses';
+  static const _leadsKey = 'leads';
+  static const _businessActionsKey = 'business_actions';
 
   Future<List<Habit>> loadHabits() async {
     final prefs = await SharedPreferences.getInstance();
@@ -210,5 +216,62 @@ class StorageService {
     final prefs = await SharedPreferences.getInstance();
     final raw = jsonEncode(banks.map((b) => b.toJson()).toList());
     await prefs.setString(_piggyBanksKey, raw);
+  }
+
+  /// Null means the schedule was never set up, so defaults get seeded;
+  /// an empty list means the user deliberately cleared it.
+  Future<List<DayBlock>?> loadDayBlocks() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_dayBlocksKey);
+    if (raw == null) return null;
+    final list = jsonDecode(raw) as List;
+    return list.map((e) => DayBlock.fromJson(e as Map<String, dynamic>)).toList();
+  }
+
+  Future<void> saveDayBlocks(List<DayBlock> blocks) async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = jsonEncode(blocks.map((b) => b.toJson()).toList());
+    await prefs.setString(_dayBlocksKey, raw);
+  }
+
+  Future<List<Business>?> loadBusinesses() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_businessesKey);
+    if (raw == null) return null;
+    final list = jsonDecode(raw) as List;
+    return list.map((e) => Business.fromJson(e as Map<String, dynamic>)).toList();
+  }
+
+  Future<void> saveBusinesses(List<Business> businesses) async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = jsonEncode(businesses.map((b) => b.toJson()).toList());
+    await prefs.setString(_businessesKey, raw);
+  }
+
+  Future<List<Lead>> loadLeads() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_leadsKey);
+    if (raw == null) return [];
+    final list = jsonDecode(raw) as List;
+    return list.map((e) => Lead.fromJson(e as Map<String, dynamic>)).toList();
+  }
+
+  Future<void> saveLeads(List<Lead> leads) async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = jsonEncode(leads.map((l) => l.toJson()).toList());
+    await prefs.setString(_leadsKey, raw);
+  }
+
+  Future<List<DateTime>> loadBusinessActions() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getStringList(_businessActionsKey);
+    if (raw == null) return [];
+    return raw.map(DateTime.parse).toList();
+  }
+
+  Future<void> saveBusinessActions(List<DateTime> actions) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList(
+        _businessActionsKey, actions.map((a) => a.toIso8601String()).toList());
   }
 }
